@@ -32,18 +32,23 @@
 //
 // To what floor do the instructions take Santa?
 
-
 fn main() {
     println!("part 1 final floor: {}", final_floor(REAL_INPUT));
-    println!("part 2 first basename: {}", first_basement_position(REAL_INPUT));
+    println!(
+        "part 2 first basename: {}",
+        first_basement_position(REAL_INPUT)
+    );
 }
 
 fn final_floor(parens: &str) -> i32 {
-    parens.chars().map(|c| match c {
-        '(' => 1,
-        ')' => -1,
-        _ => panic!("unknown char {}", c),
-    }).sum()
+    parens
+        .chars()
+        .map(|c| match c {
+            '(' => 1,
+            ')' => -1,
+            _ => panic!("unknown char {}", c),
+        })
+        .sum()
 }
 
 #[test]
@@ -60,14 +65,20 @@ fn test_final_floor() {
 }
 
 fn first_basement_position(parens: &str) -> usize {
-    parens.chars().map(|c| match c {
-        '(' => 1,
-        ')' => -1,
-        _ => panic!("unknown char {}", c),
-    }).scan(0, |acc, x| {
-        *acc = *acc + x;
-        Some(*acc)
-    }).position(|x| x == -1).unwrap() + 1
+    parens
+        .chars()
+        .map(|c| match c {
+            '(' => 1,
+            ')' => -1,
+            _ => panic!("unknown char {}", c),
+        })
+        .scan(0, |acc, x| {
+            *acc += x;
+            Some(*acc)
+        })
+        .position(|x| x == -1)
+        .unwrap()
+        + 1
 }
 
 #[test]
