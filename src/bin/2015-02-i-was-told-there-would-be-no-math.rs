@@ -52,10 +52,7 @@ use std::cmp::min;
 // How many total feet of ribbon should they order?
 
 fn main() {
-    let dimensions: Vec<(u32, u32, u32)> = INPUT
-        .lines()
-        .map(parse_dimensions)
-        .collect();
+    let dimensions: Vec<(u32, u32, u32)> = INPUT.lines().map(parse_dimensions).collect();
 
     let part1_solution: u32 = dimensions
         .iter()
