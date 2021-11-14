@@ -44,11 +44,28 @@ use std::iter::FromIterator;
 fn main() {
     println!("part 1 {}", unique_houses(INPUT));
 
-    // TODO: Part 2
+    // Part 2
+    let mut santa_input = Vec::<char>::new();
+    let mut robot_input = Vec::<char>::new();
+    for (i, c) in INPUT.chars().enumerate() {
+        if i % 2 == 0 {
+            santa_input.push(c);
+        } else {
+            robot_input.push(c);
+        }
+    }
+
+    let santa_houses = HashSet::<(i32, i32)>::from_iter(apply_moves(santa_input.into_iter()));
+    let robot_houses = HashSet::<(i32, i32)>::from_iter(apply_moves(robot_input.into_iter()));
+    let part2_solution: usize = santa_houses
+        .union(&robot_houses)
+        .collect::<HashSet<&(i32, i32)>>()
+        .len();
+    println!("part 2 {}", part2_solution);
 }
 
 fn unique_houses(moves: &str) -> usize {
-    HashSet::<(i32, i32)>::from_iter(apply_moves(moves)).len()
+    HashSet::<(i32, i32)>::from_iter(apply_moves(moves.chars())).len()
 }
 
 #[test]
@@ -58,9 +75,12 @@ fn test_unique_houses() {
     assert_eq!(unique_houses("^v^v^v^v^v"), 2);
 }
 
-fn apply_moves(moves: &str) -> impl Iterator<Item = (i32, i32)> + '_ {
+fn apply_moves<T>(moves: T) -> impl Iterator<Item = (i32, i32)>
+where
+    T: Iterator<Item = char>,
+{
     let mut coord = (0, 0);
-    std::iter::once(coord).chain(moves.chars().map(move |c| {
+    std::iter::once(coord).chain(moves.map(move |c| {
         coord = next_move(&coord, c);
         coord
     }))
@@ -79,7 +99,10 @@ fn next_move(&(x, y): &(i32, i32), move_char: char) -> (i32, i32) {
 #[test]
 fn test_apply_moves() {
     fn run_test(moves: &str, expect: Vec<(i32, i32)>) {
-        assert_eq!(apply_moves(moves).collect::<Vec<(i32, i32)>>(), expect);
+        assert_eq!(
+            apply_moves(moves.chars()).collect::<Vec<(i32, i32)>>(),
+            expect
+        );
     }
     run_test("", vec![(0, 0)]);
     run_test(">>", vec![(0, 0), (1, 0), (2, 0)]);
