@@ -63,9 +63,8 @@ fn is_string_nice<S: AsRef<str>>(s: S) -> bool {
     let num_vowels = s
         .as_ref()
         .chars()
-        .filter(|c| vec!['a', 'e', 'i', 'o', 'u'].contains(&c))
-        .collect::<Vec<char>>()
-        .len();
+        .filter(|c| vec!['a', 'e', 'i', 'o', 'u'].contains(c))
+        .count();
     let has_duplicate_letter = s
         .as_ref()
         .chars()
