@@ -1,13 +1,7 @@
 fn main() {
     println!("part1 {}", compute_trees(INPUT, 3, 1));
 
-    let slopes = vec![
-        (1, 1),
-        (3, 1),
-        (5, 1),
-        (7, 1),
-        (1, 2),
-    ];
+    let slopes = vec![(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)];
     let part2_solution: u32 = slopes
         .iter()
         .map(|(right, down)| compute_trees(INPUT, *right, *down))

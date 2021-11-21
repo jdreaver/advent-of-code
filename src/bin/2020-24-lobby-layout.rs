@@ -24,6 +24,7 @@ fn flip_tiles(inputs: &str) -> HashSet<HexCoord> {
     black_tiles
 }
 
+#[allow(clippy::unnecessary_fold)] // This doesn't work???
 fn final_coords(input: &str) -> HexCoord {
     parse_directions(input)
         .iter()
@@ -49,16 +50,18 @@ fn art_exhibit_day(black_tiles: HashSet<HexCoord>) -> HashSet<HexCoord> {
     // Iterate over all of the tiles now and flip
     let mut output: HashSet<HexCoord> = HashSet::new();
     for (tile, &count) in black_neighbors.iter() {
-        if black_tiles.contains(&tile) && (count == 1 || count == 2) {
-            // Any black tile with zero or more than 2 black tiles
-            // immediately adjacent to it is flipped to white.
-            //
-            // In this case, if the tile has 1 or 2 neighbors, keep it
-            // black and put it in the output.
-            output.insert(tile.clone());
-        } else if !black_tiles.contains(&tile) && count == 2 {
-            // Any white tile with exactly 2 black tiles immediately adjacent
-            // to it is flipped to black.
+        // Any black tile with zero or more than 2 black tiles
+        // immediately adjacent to it is flipped to white.
+        //
+        // In this case, if the tile has 1 or 2 neighbors, keep it
+        // black and put it in the output.
+        let keep_black = black_tiles.contains(tile) && (count == 1 || count == 2);
+
+        // Any white tile with exactly 2 black tiles immediately adjacent
+        // to it is flipped to black.
+        let flip_white = !black_tiles.contains(tile) && count == 2;
+
+        if keep_black || flip_white {
             output.insert(tile.clone());
         }
     }
@@ -176,8 +179,8 @@ fn parse_directions(input: &str) -> Vec<Direction> {
                     directions.push(Direction::Southwest);
                     i += 2;
                 }
-                _ => panic!("failed to parse {}{}", chars[i], chars[i+1]),
-            }
+                _ => panic!("failed to parse {}{}", chars[i], chars[i + 1]),
+            },
             'n' => match chars[i + 1] {
                 'e' => {
                     directions.push(Direction::Northeast);
@@ -187,8 +190,8 @@ fn parse_directions(input: &str) -> Vec<Direction> {
                     directions.push(Direction::Northwest);
                     i += 2;
                 }
-                _ => panic!("failed to parse {}{}", chars[i], chars[i+1]),
-            }
+                _ => panic!("failed to parse {}{}", chars[i], chars[i + 1]),
+            },
             _ => panic!("failed to parse {}", chars[i]),
         };
     }
@@ -197,15 +200,18 @@ fn parse_directions(input: &str) -> Vec<Direction> {
 
 #[test]
 fn test_parse_directions() {
-    assert_eq!(parse_directions("esewswnenwe"), vec![
-        Direction::East,
-        Direction::Southeast,
-        Direction::West,
-        Direction::Southwest,
-        Direction::Northeast,
-        Direction::Northwest,
-        Direction::East,
-    ]);
+    assert_eq!(
+        parse_directions("esewswnenwe"),
+        vec![
+            Direction::East,
+            Direction::Southeast,
+            Direction::West,
+            Direction::Southwest,
+            Direction::Northeast,
+            Direction::Northwest,
+            Direction::East,
+        ]
+    );
 }
 
 const _EXAMPLE: &str = "sesenwnenenewseeswwswswwnenewsewsw
