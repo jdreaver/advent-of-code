@@ -1,19 +1,27 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ops::{Add, Sub};
 
 fn main() {
-    //println!("{:?}", final_coords("esew"));
-    //println!("{:?}", final_coords("nwwswee"));
-    println!("part1 {}", part1_solution(INPUT));
+    let mut black_tiles = flip_tiles(INPUT);
+    println!("part1 {}", black_tiles.len());
+
+    for _ in 1..=100 {
+        black_tiles = art_exhibit_day(black_tiles);
+    }
+    println!("part2 {}", black_tiles.len());
 }
 
-fn part1_solution(inputs: &str) -> usize {
-    let mut coord_counts: HashMap<HexCoord, u32> = HashMap::new();
+fn flip_tiles(inputs: &str) -> HashSet<HexCoord> {
+    let mut black_tiles: HashSet<HexCoord> = HashSet::new();
     for coord in inputs.lines().map(final_coords) {
-        *coord_counts.entry(coord).or_insert(1) += 1;
+        if black_tiles.contains(&coord) {
+            black_tiles.remove(&coord);
+        } else {
+            black_tiles.insert(coord);
+        }
     }
 
-    coord_counts.iter().filter(|(_, c)| c.rem_euclid(2) == 0).count()
+    black_tiles
 }
 
 fn final_coords(input: &str) -> HexCoord {
@@ -21,6 +29,41 @@ fn final_coords(input: &str) -> HexCoord {
         .iter()
         .map(direction_coord)
         .fold(HexCoord { q: 0, r: 0 }, |acc, x| acc + x)
+}
+
+fn art_exhibit_day(black_tiles: HashSet<HexCoord>) -> HashSet<HexCoord> {
+    // First count how many black neighbors each tile has
+    let mut black_neighbors: HashMap<HexCoord, u8> = HashMap::new();
+    for black_tile in black_tiles.iter() {
+        for neighbor in neighbors(black_tile) {
+            *black_neighbors.entry(neighbor).or_insert(0) += 1;
+        }
+    }
+
+    // Insert all the black tiles also (they might not have neighbors)
+    // (We actually don't need this because these will all turn white)
+    // for black_tile in black_tiles.iter() {
+    //     black_neighbors.entry(black_tile.clone()).or_insert(0);
+    // }
+
+    // Iterate over all of the tiles now and flip
+    let mut output: HashSet<HexCoord> = HashSet::new();
+    for (tile, &count) in black_neighbors.iter() {
+        if black_tiles.contains(&tile) && (count == 1 || count == 2) {
+            // Any black tile with zero or more than 2 black tiles
+            // immediately adjacent to it is flipped to white.
+            //
+            // In this case, if the tile has 1 or 2 neighbors, keep it
+            // black and put it in the output.
+            output.insert(tile.clone());
+        } else if !black_tiles.contains(&tile) && count == 2 {
+            // Any white tile with exactly 2 black tiles immediately adjacent
+            // to it is flipped to black.
+            output.insert(tile.clone());
+        }
+    }
+
+    output
 }
 
 // Hex coords are 3D using x, y, and z
@@ -49,7 +92,18 @@ fn direction_coord(dir: &Direction) -> HexCoord {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+fn neighbors(coord: &HexCoord) -> Vec<HexCoord> {
+    vec![
+        coord + &direction_coord(&Direction::East),
+        coord + &direction_coord(&Direction::Southeast),
+        coord + &direction_coord(&Direction::Southwest),
+        coord + &direction_coord(&Direction::West),
+        coord + &direction_coord(&Direction::Northwest),
+        coord + &direction_coord(&Direction::Northeast),
+    ]
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 struct HexCoord {
     q: i32,
     r: i32,
@@ -60,6 +114,17 @@ impl Add for HexCoord {
 
     fn add(self, other: Self) -> Self {
         Self {
+            q: self.q + other.q,
+            r: self.r + other.r,
+        }
+    }
+}
+
+impl<'a, 'b> Add<&'b HexCoord> for &'a HexCoord {
+    type Output = HexCoord;
+
+    fn add(self, other: &'b HexCoord) -> HexCoord {
+        HexCoord {
             q: self.q + other.q,
             r: self.r + other.r,
         }
