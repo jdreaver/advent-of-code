@@ -1,20 +1,53 @@
+use std::collections::HashSet;
+use std::iter::FromIterator;
 use itertools::Itertools;
 
 fn main() {
-    let part1_solution = customs_groups(INPUT)
+    let groups = customs_groups(INPUT);
+    println!("part1: {}", any_answered(&groups));
+    println!("part2: {}", all_answered(&groups));
+}
+
+fn any_answered(groups: &Vec<Vec<&str>>) -> usize {
+    groups
         .iter()
-        .map(|g| g.chars().unique().count())
-        .sum::<usize>();
-    println!("part1: {}", part1_solution);
+        .map(|g| g.join("").chars().unique().count())
+        .sum::<usize>()
+}
+
+fn all_answered(groups: &Vec<Vec<&str>>) -> usize {
+    groups
+        .iter()
+        .map(|g| g
+             .iter()
+             .map(|i| HashSet::from_iter(i.chars()))
+             .reduce(|x: HashSet<char>, y| x.intersection(&y).cloned().collect())
+             .expect("group HashSet intersection")
+             .len()
+        )
+        .sum()
+
+    // let mut counts: Vec<usize> = Vec::new();
+
+    // for group in groups {
+    //     let mut all_answers: HashSet<char> = HashSet::from_iter(group[0].chars());
+    //     for x in group.iter().skip(1) {
+    //         let x_chars = HashSet::from_iter(x.chars());
+    //         all_answers = all_answers.intersection(&x_chars).cloned().collect();
+    //     }
+    //     counts.push(all_answers.len());
+    // }
+
+    // counts.iter().sum()
 }
 
 // Customs group entries are separated by blank lines
-fn customs_groups(input: &str) -> Vec<String> {
+fn customs_groups(input: &str) -> Vec<Vec<&str>> {
     let mut entries = Vec::new();
     let mut current_entry = Vec::new();
     for line in input.lines() {
         if line.is_empty() {
-            entries.push(current_entry.join(""));
+            entries.push(current_entry);
             current_entry = Vec::new();
         } else {
             current_entry.push(line);
@@ -22,7 +55,7 @@ fn customs_groups(input: &str) -> Vec<String> {
     }
 
     if !current_entry.is_empty() {
-        entries.push(current_entry.join(""));
+        entries.push(current_entry);
     }
 
     entries
