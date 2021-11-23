@@ -4,14 +4,8 @@ fn main() {
     assert_eq!(get_seat_id("FFFBBBFRRR"), 119);
     assert_eq!(get_seat_id("BBFFBBFRLL"), 820);
 
-    let seat_ids = INPUT
-        .lines()
-        .map(get_seat_id)
-        .collect::<Vec<u32>>();
-    let max_seat_id = seat_ids
-        .iter()
-        .max()
-        .expect("couldn't get max for part 1");
+    let seat_ids = INPUT.lines().map(get_seat_id).collect::<Vec<u32>>();
+    let max_seat_id = seat_ids.iter().max().expect("couldn't get max for part 1");
     println!("part1: {}", max_seat_id);
 
     println!("part2: {}", find_my_seat(&seat_ids));
@@ -37,9 +31,9 @@ fn find_my_seat(seat_ids: &[u32]) -> usize {
         seat_in_list[*seat_id as usize] = true;
     }
 
-    for i in 1..(max_id-1) {
-        if !seat_in_list[i] && seat_in_list[i-1] && seat_in_list[i+1] {
-            return i
+    for i in 1..(max_id - 1) {
+        if !seat_in_list[i] && seat_in_list[i - 1] && seat_in_list[i + 1] {
+            return i;
         }
     }
 

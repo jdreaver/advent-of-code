@@ -1,6 +1,6 @@
+use itertools::Itertools;
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use itertools::Itertools;
 
 fn main() {
     let groups = customs_groups(INPUT);
@@ -18,13 +18,13 @@ fn any_answered(groups: &Vec<Vec<&str>>) -> usize {
 fn all_answered(groups: &Vec<Vec<&str>>) -> usize {
     groups
         .iter()
-        .map(|g| g
-             .iter()
-             .map(|i| HashSet::from_iter(i.chars()))
-             .reduce(|x: HashSet<char>, y| x.intersection(&y).cloned().collect())
-             .expect("group HashSet intersection")
-             .len()
-        )
+        .map(|g| {
+            g.iter()
+                .map(|i| HashSet::from_iter(i.chars()))
+                .reduce(|x: HashSet<char>, y| x.intersection(&y).cloned().collect())
+                .expect("group HashSet intersection")
+                .len()
+        })
         .sum()
 
     // let mut counts: Vec<usize> = Vec::new();
@@ -61,7 +61,6 @@ fn customs_groups(input: &str) -> Vec<Vec<&str>> {
     entries
 }
 
-
 const _EXAMPLE: &str = "abc
 
 a
@@ -77,7 +76,6 @@ a
 a
 
 b";
-
 
 const INPUT: &str = "wdcmlzfnugqtvjbsahi
 easrkmocxbpjgi
