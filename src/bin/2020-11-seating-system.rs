@@ -1,15 +1,17 @@
 use std::cmp;
+use std::collections::HashMap;
 
 fn main() {
     let seats = parse_input(INPUT);
-    println!("part1: {}", stable_occupied_count(&seats));
+    println!("part1: {}", stable_occupied_count_part1(&seats));
+    println!("part2: {}", stable_occupied_count_part2(&seats));
 }
 
-fn stable_occupied_count(seats: &Vec<Vec<Option<Seat>>>) -> usize {
+fn stable_occupied_count_part1(seats: &Vec<Vec<Option<Seat>>>) -> usize {
     let mut seats = seats.clone();
     let mut result = 0;
     loop {
-        seats = sim_step(&seats);
+        seats = sim_step_part1(&seats);
         // println!("{}\n", print_input(&seats));
         let this_occupied = num_occupied(&seats);
         if this_occupied == result {
@@ -19,7 +21,7 @@ fn stable_occupied_count(seats: &Vec<Vec<Option<Seat>>>) -> usize {
     }
 }
 
-fn sim_step(seats: &Vec<Vec<Option<Seat>>>) -> Vec<Vec<Option<Seat>>> {
+fn sim_step_part1(seats: &Vec<Vec<Option<Seat>>>) -> Vec<Vec<Option<Seat>>> {
     let mut out = seats.clone().to_vec();
     for (row, line) in seats.iter().enumerate() {
         for (col, seat) in line.iter().enumerate() {
@@ -43,6 +45,93 @@ fn sim_step(seats: &Vec<Vec<Option<Seat>>>) -> Vec<Vec<Option<Seat>>> {
             // adjacent to it are also occupied, the seat becomes
             // empty.
             if *seat == Some(Seat::Occupied) && occupied_neighbors >= 4 {
+                out[row][col] = Some(Seat::Empty);
+            }
+        }
+    }
+    out
+}
+
+// Computes which seats a given seat can see for part two
+fn visibility_map(seats: &Vec<Vec<Option<Seat>>>) -> HashMap<(usize, usize), Vec<(usize, usize)>> {
+    let mut map = HashMap::new();
+    let directions: Vec<(i32, i32)> = vec![
+        (1, 0),
+        (1, -1),
+        (0, -1),
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, 1),
+        (1, 1),
+    ];
+
+    for (row, line) in seats.iter().enumerate() {
+        for (col, seat) in line.iter().enumerate() {
+            if seat.is_none() {
+                continue;
+            }
+
+            for (drow, dcol) in &directions {
+                let mut i: i32 = row as i32 + drow;
+                let mut j: i32 = col as i32 + dcol;
+                while i >= 0 && i < seats.len() as i32 && j >= 0 && j < line.len() as i32 {
+                    if let Some(_) = seats[i as usize][j as usize] {
+                        map.entry((row, col)).or_insert(vec![]).push((i as usize, j as usize));
+                        break;
+                    }
+
+                    i += drow;
+                    j += dcol;
+                }
+            }
+        }
+    }
+
+    map
+}
+
+fn stable_occupied_count_part2(seats: &Vec<Vec<Option<Seat>>>) -> usize {
+    let mut seats = seats.clone();
+    let vis_map = visibility_map(&seats);
+    let mut result = 0;
+    loop {
+        seats = sim_step_part2(&seats, &vis_map);
+        // println!("{}\n", print_input(&seats));
+        let this_occupied = num_occupied(&seats);
+        if this_occupied == result {
+            return result;
+        }
+        result = this_occupied;
+    }
+}
+
+fn sim_step_part2(seats: &Vec<Vec<Option<Seat>>>, vis_map: &HashMap<(usize, usize), Vec<(usize, usize)>>) -> Vec<Vec<Option<Seat>>> {
+    let mut out = seats.clone().to_vec();
+    for (row, line) in seats.iter().enumerate() {
+        for (col, seat) in line.iter().enumerate() {
+            if seat.is_none() {
+                continue;
+            }
+
+            let mut occupied_neighbors = 0;
+
+            for (i, j) in vis_map[&(row, col)].iter() {
+                if seats[*i][*j] == Some(Seat::Occupied) {
+                    occupied_neighbors += 1;
+                }
+            }
+
+            // If a seat is empty (L) and there are no occupied seats
+            // adjacent to it, the seat becomes occupied.
+            if *seat == Some(Seat::Empty) && occupied_neighbors == 0 {
+                out[row][col] = Some(Seat::Occupied);
+            }
+
+            // If a seat is occupied (#) and four or more seats
+            // adjacent to it are also occupied, the seat becomes
+            // empty.
+            if *seat == Some(Seat::Occupied) && occupied_neighbors >= 5 {
                 out[row][col] = Some(Seat::Empty);
             }
         }
