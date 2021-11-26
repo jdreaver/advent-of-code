@@ -9,13 +9,12 @@ fn main() {
 
     let part2 = find_contiguous_sum(&input, invalid_number);
     println!("part2: {}", part2);
-
 }
 
 fn find_first_invalid(input: &[u64], prefix_size: usize) -> u64 {
     'top_level: for (i, x) in input.iter().enumerate().skip(prefix_size) {
         for j in (i - prefix_size)..i {
-            for k in (j+1)..i {
+            for k in (j + 1)..i {
                 if input[j] + input[k] == *x {
                     continue 'top_level;
                 }
@@ -41,14 +40,15 @@ fn find_contiguous_sum(input: &[u64], target: u64) -> u64 {
         } else if current_sum < target {
             j += 1;
             current_sum += input[j];
-        } else { // current_sum > target
+        } else {
+            // current_sum > target
             current_sum -= input[i];
             i += 1;
         }
     }
 }
 
-fn parse_input(input: &str) -> impl Iterator<Item=u64> + '_ {
+fn parse_input(input: &str) -> impl Iterator<Item = u64> + '_ {
     input
         .lines()
         .map(|x| x.parse::<u64>().expect("failed parsing input number"))

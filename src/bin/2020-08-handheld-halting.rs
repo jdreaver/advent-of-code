@@ -14,7 +14,7 @@ fn simulate(instructions: &[Instruction]) -> (bool, i32) {
 
     while i < instructions.len() {
         if seen[i] {
-            return (true, accumulator)
+            return (true, accumulator);
         }
         seen[i] = true;
 
@@ -76,9 +76,7 @@ fn parse_instructions(input: &str) -> Vec<Instruction> {
 }
 
 fn parse_instruction(line: &str) -> Instruction {
-    let (inst, x_str) = line
-        .split_once(' ')
-        .expect("no space in instruction");
+    let (inst, x_str) = line.split_once(' ').expect("no space in instruction");
     let x = x_str.parse::<i32>().expect("parse instruction arg");
     match inst {
         "acc" => Instruction::Acc(x),

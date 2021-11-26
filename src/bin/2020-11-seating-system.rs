@@ -77,7 +77,9 @@ fn visibility_map(seats: &Vec<Vec<Option<Seat>>>) -> HashMap<(usize, usize), Vec
                 let mut j: i32 = col as i32 + dcol;
                 while i >= 0 && i < seats.len() as i32 && j >= 0 && j < line.len() as i32 {
                     if let Some(_) = seats[i as usize][j as usize] {
-                        map.entry((row, col)).or_insert(vec![]).push((i as usize, j as usize));
+                        map.entry((row, col))
+                            .or_insert(vec![])
+                            .push((i as usize, j as usize));
                         break;
                     }
 
@@ -106,7 +108,10 @@ fn stable_occupied_count_part2(seats: &Vec<Vec<Option<Seat>>>) -> usize {
     }
 }
 
-fn sim_step_part2(seats: &Vec<Vec<Option<Seat>>>, vis_map: &HashMap<(usize, usize), Vec<(usize, usize)>>) -> Vec<Vec<Option<Seat>>> {
+fn sim_step_part2(
+    seats: &Vec<Vec<Option<Seat>>>,
+    vis_map: &HashMap<(usize, usize), Vec<(usize, usize)>>,
+) -> Vec<Vec<Option<Seat>>> {
     let mut out = seats.clone().to_vec();
     for (row, line) in seats.iter().enumerate() {
         for (col, seat) in line.iter().enumerate() {
@@ -155,32 +160,27 @@ enum Seat {
 fn parse_input(input: &str) -> Vec<Vec<Option<Seat>>> {
     input
         .lines()
-        .map(|line| line
-             .chars()
-             .map(|c| {
-                 if c == 'L' {
-                     Some(Seat::Empty)
-                 } else {
-                     None
-                 }
-             })
-             .collect()
-        ).collect()
+        .map(|line| {
+            line.chars()
+                .map(|c| if c == 'L' { Some(Seat::Empty) } else { None })
+                .collect()
+        })
+        .collect()
 }
 
 fn print_input(seats: &Vec<Vec<Option<Seat>>>) -> String {
     seats
         .iter()
-        .map(|line| line
-             .iter()
-             .map(|s| match s {
-                 None => ".",
-                 Some(Seat::Empty) => "L",
-                 Some(Seat::Occupied) => "#",
-             })
-             .collect::<Vec<&str>>()
-             .join("")
-        )
+        .map(|line| {
+            line.iter()
+                .map(|s| match s {
+                    None => ".",
+                    Some(Seat::Empty) => "L",
+                    Some(Seat::Occupied) => "#",
+                })
+                .collect::<Vec<&str>>()
+                .join("")
+        })
         .collect::<Vec<String>>()
         .join("\n")
 }
@@ -196,7 +196,8 @@ LLLLLLLLLL
 L.LLLLLL.L
 L.LLLLL.LL";
 
-const INPUT: &str = "LLLLLLLLLLLL.LLLLLLLLLL.LLLL.LLLL.LLLLLLLLLLL.LLLL.LLLLLLL.LL.LLLLLLLL.LLL.LLLLLLLLLLL.LLLLLLL
+const INPUT: &str =
+    "LLLLLLLLLLLL.LLLLLLLLLL.LLLL.LLLL.LLLLLLLLLLL.LLLL.LLLLLLL.LL.LLLLLLLL.LLL.LLLLLLLLLLL.LLLLLLL
 LLLLLLLLLLL.LLLL.L..LLL.LL.LLLLLLLLLLL.LLLLLL.LLLLLLLL.L.LLLLL.LLLLLL..LLL.LLLLLLLLLLLLLLLLLLL
 LLLLLL.LLLL.LLLL.L.LLLL.LLL.LLLLLLLLLLLLLLLLL.LLLLLLLLLLLLLLL..LLLLLLLLLLLLLLLLLLLLLLLLLLL.LLL
 LLLLLLLLLLL.LL.LL..LLLL.LLLL.L.LLLLLLL.LLLLLL.LLLLLLLLLLLLLLL.LLLLLLLL.LLLLLLLL.LLLLLLLLLLLLLL

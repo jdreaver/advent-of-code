@@ -29,23 +29,21 @@ fn part1_simulate(instructions: &[Instruction]) -> (i32, i32) {
             Instruction::Right(num) => {
                 heading = (heading - *num as i32).rem_euclid(360);
             }
-            Instruction::Forward(num) => {
-                match heading {
-                    0 => {
-                        x += *num as i32;
-                    }
-                    90 => {
-                        y += *num as i32;
-                    }
-                    180 => {
-                        x -= *num as i32;
-                    }
-                    270 => {
-                        y -= *num as i32;
-                    }
-                    _ => panic!("invalid heading {}", heading),
+            Instruction::Forward(num) => match heading {
+                0 => {
+                    x += *num as i32;
                 }
-            }
+                90 => {
+                    y += *num as i32;
+                }
+                180 => {
+                    x -= *num as i32;
+                }
+                270 => {
+                    y -= *num as i32;
+                }
+                _ => panic!("invalid heading {}", heading),
+            },
         }
         //println!("inst: {:?}, x: {}, y: {}, heading: {}", instruction, x, y, heading);
     }
@@ -65,10 +63,7 @@ enum Instruction {
 }
 
 fn parse_input(input: &str) -> Vec<Instruction> {
-    input
-        .lines()
-        .map(parse_instruction)
-        .collect()
+    input.lines().map(parse_instruction).collect()
 }
 
 fn parse_instruction(input: &str) -> Instruction {
