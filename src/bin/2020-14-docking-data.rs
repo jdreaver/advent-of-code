@@ -4,11 +4,14 @@ use std::collections::HashMap;
 
 fn main() {
     let input = parse_input(INPUT);
-    let part1_mem = apply_instructions(&input);
+    let part1_mem = apply_instructions_part1(&input);
     println!("part1: {}", part1_mem.values().sum::<u64>());
+
+    let part2_mem = apply_instructions_part2(&input);
+    println!("part2: {}", part2_mem.values().sum::<u64>());
 }
 
-fn apply_instructions(instructions: &[Instruction]) -> HashMap<usize, u64> {
+fn apply_instructions_part1(instructions: &[Instruction]) -> HashMap<usize, u64> {
     let mut mask = vec![None; 36];
     let mut mem = HashMap::new();
     for instruction in instructions {
@@ -17,14 +20,14 @@ fn apply_instructions(instructions: &[Instruction]) -> HashMap<usize, u64> {
                 mask = m.to_vec();
             },
             Instruction::Memset { index, value } => {
-                mem.insert(*index, apply_mask(&mask, *value));
+                mem.insert(*index, apply_value_mask(&mask, *value));
             },
         }
     }
     mem
 }
 
-fn apply_mask(mask: &[Option<bool>], num: u64) -> u64 {
+fn apply_value_mask(mask: &[Option<bool>], num: u64) -> u64 {
     let mut result: u64 = num;
     for (offset, mask_bit) in mask.iter().rev().enumerate() {
         match mask_bit {
@@ -41,11 +44,98 @@ fn apply_mask(mask: &[Option<bool>], num: u64) -> u64 {
 }
 
 #[test]
-fn test_mask() {
+fn test_apply_value_mask() {
     let mask = vec![None, None, Some(true), None, None, None, None, Some(false), None];
-    assert_eq!(apply_mask(&mask, 11), 73);
-    assert_eq!(apply_mask(&mask, 101), 101);
-    assert_eq!(apply_mask(&mask, 0), 64);
+    assert_eq!(apply_value_mask(&mask, 11), 73);
+    assert_eq!(apply_value_mask(&mask, 101), 101);
+    assert_eq!(apply_value_mask(&mask, 0), 64);
+}
+
+fn apply_instructions_part2(instructions: &[Instruction]) -> HashMap<usize, u64> {
+    let mut mask = vec![None; 36];
+    let mut mem = HashMap::new();
+    for instruction in instructions {
+        match instruction {
+            Instruction::Mask(m) => {
+                mask = m.to_vec();
+            },
+            Instruction::Memset { index, value } => {
+                let mems = apply_address_mask(&mask, *index);
+                for index in mems {
+                    mem.insert(index, *value);
+                }
+            },
+        }
+    }
+    mem
+}
+
+
+fn apply_address_mask(mask: &[Option<bool>], address: usize) -> Vec<usize> {
+    // First create the new mask
+    let mut new_mask: Vec<Option<bool>> = Vec::new();
+    for (i, mask_bit) in mask.iter().enumerate() {
+        match mask_bit {
+            None => {
+                // If the bitmask bit is X, the corresponding memory
+                // address bit is floating.
+                new_mask.push(None);
+            },
+            Some(true) => {
+                // If the bitmask bit is 1, the corresponding memory
+                // address bit is overwritten with 1.
+                new_mask.push(Some(true));
+            },
+            Some(false) => {
+                // If the bitmask bit is 0, the corresponding memory
+                // address bit is unchanged.
+                let shift = mask.len() - i - 1;
+                new_mask.push(Some((address >> shift & 1) != 0));
+            },
+        }
+    }
+
+    // Then apply the mask to the address
+    let mut result = vec![0];
+    for mask_bit in new_mask {
+        match mask_bit {
+            Some(true) => {
+                for x in &mut result {
+                    *x = *x << 1 | 1;
+                }
+            },
+            Some(false) => {
+                for x in &mut result {
+                    *x = *x << 1;
+                }
+            },
+            None => {
+                let mut new_result = vec![];
+                for x in &mut result {
+                    new_result.push(*x << 1 | 1);
+                }
+                for x in &mut result {
+                    new_result.push(*x << 1);
+                }
+                result = new_result;
+            },
+        }
+
+    }
+    result
+}
+
+#[test]
+fn test_apply_address_mask() {
+    let mask = vec![None, Some(true), Some(false), Some(false), Some(true), None];
+    let mut got = apply_address_mask(&mask, 42);
+    got.sort();
+    assert_eq!(got, vec![26, 27, 58, 59]);
+
+    let mask = vec![Some(true), None, Some(false), None, None];
+    let mut got = apply_address_mask(&mask, 26);
+    got.sort();
+    assert_eq!(got, vec![16, 17, 18, 19, 24, 25, 26, 27]);
 }
 
 #[derive(Debug)]
