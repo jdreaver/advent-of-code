@@ -8,14 +8,14 @@ fn main() {
     println!("part2: {}", all_answered(&groups));
 }
 
-fn any_answered(groups: &Vec<Vec<&str>>) -> usize {
+fn any_answered(groups: &[Vec<&str>]) -> usize {
     groups
         .iter()
         .map(|g| g.join("").chars().unique().count())
         .sum::<usize>()
 }
 
-fn all_answered(groups: &Vec<Vec<&str>>) -> usize {
+fn all_answered(groups: &[Vec<&str>]) -> usize {
     groups
         .iter()
         .map(|g| {

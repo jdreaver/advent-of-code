@@ -18,7 +18,7 @@ fn parse_input(input: &str) -> Vec<u32> {
 
 fn part1_solution(input: &[u32]) -> u32 {
     // Add 0 to input (wall) and then sort
-    let mut input = input.clone().to_vec();
+    let mut input = input.to_vec();
     input.push(0);
     input.push(input.iter().max().expect("max") + 3);
     input.sort();

@@ -46,7 +46,7 @@ enum BinaryPartition {
     Lower,
 }
 
-fn partition_location(partitions: &Vec<BinaryPartition>) -> u32 {
+fn partition_location(partitions: &[BinaryPartition]) -> u32 {
     let mut min = 0;
     let mut size = 2_u32.pow(partitions.len() as u32);
 
