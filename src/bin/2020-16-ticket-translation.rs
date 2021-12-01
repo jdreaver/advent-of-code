@@ -1,6 +1,10 @@
+use std::collections::HashSet;
+
 fn main() {
-    let input = parse_input(INPUT);
+    let input = parse_input(_EXAMPLE2);
     println!("part1: {}", nearby_error_rate(&input));
+
+    println!("{:?}", derive_fields(&input));
 }
 
 fn nearby_error_rate(input: &Input) -> u32 {
@@ -22,7 +26,50 @@ fn invalid_fields(definitions: &[FieldDefinition], ticket: &Ticket) -> Vec<u32> 
 fn field_valid(definitions: &[FieldDefinition], field: u32) -> bool {
     definitions
         .iter()
-        .any(|def| def.ranges.iter().any(|(min, max)| field >= *min && field <= *max))
+        .any(|def| field_def_valid(def, field))
+}
+
+fn field_def_valid(definition: &FieldDefinition, field: u32) -> bool {
+    definition.ranges.iter().any(|(min, max)| field >= *min && field <= *max)
+}
+
+fn derive_fields<'a>(input: &'a Input) -> Vec<FieldDefinition<'a>> {
+    // Filter out invalid tickets
+    let valid_nearby = input
+        .nearby_tickets
+        .iter()
+        .filter(|ticket| invalid_fields(&input.field_definitions, ticket).len() == 0)
+        .cloned()
+        .collect::<Vec<Ticket>>();
+
+    // Find possible field definitions for each position
+    let all_fields: HashSet<FieldDefinition> = input
+        .field_definitions
+        .iter()
+        .cloned()
+        .collect();
+    let mut possible_fields: Vec<HashSet<FieldDefinition>> = valid_nearby[0]
+        .iter()
+        .map(|_| all_fields.clone())
+        .collect();
+    for ticket in valid_nearby {
+        println!("before ticket {:?} {:#?}", ticket, possible_fields);
+        for (i, ticket_field) in ticket.iter().enumerate() {
+            possible_fields[i].retain(|def| field_def_valid(def, *ticket_field));
+        }
+        println!("after ticket {:?} {:#?}", ticket, possible_fields);
+    }
+
+    // Eliminate ambiguous fields
+    // TODO
+
+    possible_fields
+        .iter()
+        .map(|possibs| {
+            assert!(possibs.len() == 1);
+            possibs.into_iter().nth(0).expect("couldn't get first def").clone()
+        })
+        .collect()
 }
 
 #[derive(Debug)]
@@ -32,7 +79,7 @@ struct Input<'a> {
     nearby_tickets: Vec<Ticket>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct FieldDefinition<'a> {
     name: &'a str,
     ranges: Vec<(u32, u32)>,
@@ -91,7 +138,7 @@ fn parse_ticket(line: &str) -> Ticket {
         .collect()
 }
 
-const _EXAMPLE: &str = "class: 1-3 or 5-7
+const _EXAMPLE1: &str = "class: 1-3 or 5-7
 row: 6-11 or 33-44
 seat: 13-40 or 45-50
 
@@ -103,6 +150,18 @@ nearby tickets:
 40,4,50
 55,2,20
 38,6,12";
+
+const _EXAMPLE2: &str = "class: 0-1 or 4-19
+row: 0-5 or 8-19
+seat: 0-13 or 16-19
+
+your ticket:
+11,12,13
+
+nearby tickets:
+3,9,18
+15,1,5
+5,14,9";
 
 const INPUT: &str = "departure location: 49-239 or 247-960
 departure station: 43-135 or 155-963
