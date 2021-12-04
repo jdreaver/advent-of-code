@@ -1,59 +1,94 @@
 fn main() {
-    let input = parse_input(_EXAMPLE);
+    let input = parse_input(INPUT);
 
     let (gamma, epsilon) = gamma_epsilon_rates(&input);
     println!("part1: {:?}", gamma * epsilon);
+
+    let (o2, co2) = o2_co2_ratings(&input);
+    println!("part2: {:?}", o2 * co2);
 }
 
-fn gamma_epsilon_rates(input: &[Vec<bool>]) -> (u32, u32) {
-    let common_bits = most_common_bits(input);
-    println!("common bits {:?}", common_bits);
-    let gamma_str: String = common_bits
-        .iter()
-        .map(|b| if *b {
-            "1"
-        } else {
-            "0"
-        })
-        .collect();
-    let epsilon_str: String = common_bits
-        .iter()
-        .map(|b| if *b {
-            "0"
-        } else {
-            "1"
-        })
-        .collect();
+fn gamma_epsilon_rates(inputs: &[Vec<bool>]) -> (u32, u32) {
+    let mut gamma_str = String::new();
+    let mut epsilon_str = String::new();
+
+    for pos in 0..inputs[0].len() {
+        let most_common = most_common_bit_in_position(inputs, pos);
+        gamma_str.push(bit_to_char(&most_common));
+        epsilon_str.push(bit_to_char(&(!most_common)));
+    }
 
     let gamma = u32::from_str_radix(&gamma_str, 2).expect("gamma from_str_radix");
     let epsilon = u32::from_str_radix(&epsilon_str, 2).expect("epsilon from_str_radix");
     (gamma, epsilon)
 }
 
-fn most_common_bits(input: &[Vec<bool>]) -> Vec<bool> {
-    let mut num_ones = vec![0; input[0].len()];
-    for row in input {
-        for (i, bit) in row.iter().enumerate() {
-            if *bit {
-                num_ones[i] += 1;
-            }
-        }
-    }
+fn most_common_bit_in_position(inputs: &[Vec<bool>], pos: usize) -> bool {
+    most_common_bit(&extract_bit(inputs, pos))
+}
 
-    num_ones
+fn extract_bit(inputs: &[Vec<bool>], pos: usize) -> Vec<bool> {
+    inputs
         .iter()
-        .map(|num| *num >= (input.len() / 2))
+        .map(|line| line[pos])
         .collect()
 }
 
-// fn o2_co2_ratings(input: &[Vec<bool>]) -> (u32, u32) {
-//     let common_bits = most_common_bits(input);
-//     let o2_inputs = input.to_vec();
-//     let co2_inputs = input.to_vec();
-//     for (j, most_common_bit) in common_bits {
+fn most_common_bit(input: &[bool]) -> bool {
+    let num_true = input
+        .iter()
+        .filter(|x| **x)
+        .count();
 
-//     }
-// }
+    if input.len() % 2 == 0 {
+        num_true >= input.len() / 2
+    } else {
+        num_true > input.len() / 2
+    }
+}
+
+fn bit_to_char(bit: &bool) -> char {
+    if *bit {
+        '1'
+    } else {
+        '0'
+    }
+}
+
+fn o2_co2_ratings(inputs: &[Vec<bool>]) -> (u32, u32) {
+    let mut o2_inputs = inputs.to_vec();
+    let mut co2_inputs = inputs.to_vec();
+
+    for pos in 0..inputs[0].len() {
+        if o2_inputs.len() > 1 {
+            let most_common_o2 = most_common_bit_in_position(&o2_inputs, pos);
+            o2_inputs = o2_inputs
+                .iter()
+                .filter(|input| input[pos] == most_common_o2)
+                .cloned()
+                .collect();
+        }
+
+        if co2_inputs.len() > 1 {
+            let least_common_co2 = !most_common_bit_in_position(&co2_inputs, pos);
+            co2_inputs = co2_inputs
+                .iter()
+                .filter(|input| input[pos] == least_common_co2)
+                .cloned()
+                .collect();
+        }
+    }
+
+    assert_eq!(o2_inputs.len(), 1);
+    assert_eq!(co2_inputs.len(), 1);
+
+    let o2_str: String = o2_inputs[0].iter().map(bit_to_char).collect();
+    let co2_str: String = co2_inputs[0].iter().map(bit_to_char).collect();
+
+    let o2 = u32::from_str_radix(&o2_str, 2).expect("o2 from_str_radix");
+    let co2 = u32::from_str_radix(&co2_str, 2).expect("co2 from_str_radix");
+    (o2, co2)
+}
 
 fn parse_input(input: &str) -> Vec<Vec<bool>> {
     input
