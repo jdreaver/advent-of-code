@@ -1,23 +1,29 @@
 fn main() {
     let part1: u64 = INPUT
         .lines()
-        .map(parse_and_eval)
+        .map(parse_and_eval_part1)
         .sum();
     println!("part1: {}", part1);
+
+    let part2: u64 = INPUT
+        .lines()
+        .map(parse_and_eval_part2)
+        .sum();
+    println!("part2: {}", part2);
 }
 
-fn parse_and_eval(input: &str) -> u64 {
-    evaluate_expr(&parse_expr(&parse_tokens(input)))
+fn parse_and_eval_part1(input: &str) -> u64 {
+    evaluate_expr(&parse_expr_part1(&parse_tokens(input)))
 }
 
 #[test]
-fn test_parse_and_eval() {
-    assert_eq!(parse_and_eval("1 + 2 * 3 + 4 * 5 + 6"), 71);
-    assert_eq!(parse_and_eval("1 + (2 * 3) + (4 * (5 + 6))"), 51);
-    assert_eq!(parse_and_eval("2 * 3 + (4 * 5)"), 26);
-    assert_eq!(parse_and_eval("5 + (8 * 3 + 9 + 3 * 4 * 3)"), 437);
-    assert_eq!(parse_and_eval("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))"), 12240);
-    assert_eq!(parse_and_eval("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2"), 13632);
+fn test_parse_and_eval_part1() {
+    assert_eq!(parse_and_eval_part1("1 + 2 * 3 + 4 * 5 + 6"), 71);
+    assert_eq!(parse_and_eval_part1("1 + (2 * 3) + (4 * (5 + 6))"), 51);
+    assert_eq!(parse_and_eval_part1("2 * 3 + (4 * 5)"), 26);
+    assert_eq!(parse_and_eval_part1("5 + (8 * 3 + 9 + 3 * 4 * 3)"), 437);
+    assert_eq!(parse_and_eval_part1("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))"), 12240);
+    assert_eq!(parse_and_eval_part1("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2"), 13632);
 }
 
 fn evaluate_expr(expr: &Expr) -> u64 {
@@ -54,17 +60,16 @@ enum Expr {
 /// operator       → primary ( ( "*" | "+" ) primary )* ;
 /// primary        → NUMBER | "(" expression ")" ;
 /// ```
-
-fn parse_expr(tokens: &[Token]) -> Expr {
-    let (i, expr) = parse_operator(0, tokens);
+fn parse_expr_part1(tokens: &[Token]) -> Expr {
+    let (i, expr) = parse_operator_part1(0, tokens);
     if i != tokens.len() {
         panic!("didn't consume all input! Only up to {}", i);
     }
     expr
 }
 
-fn parse_operator(i: usize, tokens: &[Token]) -> (usize, Expr) {
-    let (i, expr) = parse_primary(i, tokens);
+fn parse_operator_part1(i: usize, tokens: &[Token]) -> (usize, Expr) {
+    let (i, expr) = parse_primary_part1(i, tokens);
 
     if i == tokens.len() {
         return (i, expr)
@@ -77,7 +82,7 @@ fn parse_operator(i: usize, tokens: &[Token]) -> (usize, Expr) {
         if i >= tokens.len() {
             panic!("reached end of input, but expected rhs for operation");
         }
-        let (i_new, rhs) = parse_primary(i, tokens);
+        let (i_new, rhs) = parse_primary_part1(i, tokens);
         i = i_new;
         expr = Expr::Operation {
             op: op.clone(),
@@ -91,7 +96,7 @@ fn parse_operator(i: usize, tokens: &[Token]) -> (usize, Expr) {
     (i, expr)
 }
 
-fn parse_primary(i: usize, tokens: &[Token]) -> (usize, Expr) {
+fn parse_primary_part1(i: usize, tokens: &[Token]) -> (usize, Expr) {
     if i >= tokens.len() {
         panic!("reached end of input in parse_primary");
     }
@@ -99,7 +104,115 @@ fn parse_primary(i: usize, tokens: &[Token]) -> (usize, Expr) {
     match &tokens[i] {
         Token::Integer(x) => (i + 1, Expr::Integer(*x)),
         Token::LeftParen => {
-            let (i, expr) = parse_operator(i + 1, tokens);
+            let (i, expr) = parse_operator_part1(i + 1, tokens);
+            if i >= tokens.len() {
+                panic!("reached end of input, but expected right paren");
+            }
+            if tokens[i] != Token::RightParen {
+                panic!("expected right paren, got {:?}", tokens[i]);
+            }
+            (i + 1, Expr::Grouping(Box::new(expr)))
+        }
+        tok => panic!("unknown token in parse_primary {:?}", tok),
+    }
+}
+
+fn parse_and_eval_part2(input: &str) -> u64 {
+    evaluate_expr(&parse_expr_part2(&parse_tokens(input)))
+}
+
+#[test]
+fn test_parse_and_eval_part2() {
+    assert_eq!(parse_and_eval_part2("1 + 2 * 3 + 4 * 5 + 6"), 231);
+    assert_eq!(parse_and_eval_part2("1 + (2 * 3) + (4 * (5 + 6))"), 51);
+    assert_eq!(parse_and_eval_part2("2 * 3 + (4 * 5)"), 46);
+    assert_eq!(parse_and_eval_part2("5 + (8 * 3 + 9 + 3 * 4 * 3)"), 1445);
+    assert_eq!(parse_and_eval_part2("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))"), 669060);
+    assert_eq!(parse_and_eval_part2("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2"), 23340);
+}
+
+/// Parses an expression using the following grammar and precedence
+/// rules:
+///
+/// ```text
+/// expression     → operator ;
+/// mult           → add ( "*" add )* ;
+/// add            → primary ( "+" primary )* ;
+/// primary        → NUMBER | "(" expression ")" ;
+/// ```
+fn parse_expr_part2(tokens: &[Token]) -> Expr {
+    let (i, expr) = parse_mult_part2(0, tokens);
+    if i != tokens.len() {
+        panic!("didn't consume all input! Only up to {}", i);
+    }
+    expr
+}
+
+fn parse_mult_part2(i: usize, tokens: &[Token]) -> (usize, Expr) {
+    let (i, expr) = parse_add_part2(i, tokens);
+
+    if i == tokens.len() {
+        return (i, expr)
+    }
+
+    let mut i = i;
+    let mut expr = expr;
+    while let Token::Operator(Operator::Multiply) = &tokens[i] {
+        i = i + 1;
+        if i >= tokens.len() {
+            panic!("reached end of input, but expected rhs for operation");
+        }
+        let (i_new, rhs) = parse_add_part2(i, tokens);
+        i = i_new;
+        expr = Expr::Operation {
+            op: Operator::Multiply,
+            lhs: Box::new(expr),
+            rhs: Box::new(rhs),
+        };
+        if i == tokens.len() {
+            break;
+        }
+    }
+    (i, expr)
+}
+
+fn parse_add_part2(i: usize, tokens: &[Token]) -> (usize, Expr) {
+    let (i, expr) = parse_primary_part2(i, tokens);
+
+    if i == tokens.len() {
+        return (i, expr)
+    }
+
+    let mut i = i;
+    let mut expr = expr;
+    while let Token::Operator(Operator::Add) = &tokens[i] {
+        i = i + 1;
+        if i >= tokens.len() {
+            panic!("reached end of input, but expected rhs for operation");
+        }
+        let (i_new, rhs) = parse_primary_part2(i, tokens);
+        i = i_new;
+        expr = Expr::Operation {
+            op: Operator::Add,
+            lhs: Box::new(expr),
+            rhs: Box::new(rhs),
+        };
+        if i == tokens.len() {
+            break;
+        }
+    }
+    (i, expr)
+}
+
+fn parse_primary_part2(i: usize, tokens: &[Token]) -> (usize, Expr) {
+    if i >= tokens.len() {
+        panic!("reached end of input in parse_primary");
+    }
+
+    match &tokens[i] {
+        Token::Integer(x) => (i + 1, Expr::Integer(*x)),
+        Token::LeftParen => {
+            let (i, expr) = parse_mult_part2(i + 1, tokens);
             if i >= tokens.len() {
                 panic!("reached end of input, but expected right paren");
             }
