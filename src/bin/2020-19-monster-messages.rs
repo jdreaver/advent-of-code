@@ -2,26 +2,76 @@ use std::collections::HashMap;
 
 fn main() {
     let input = parse_input(INPUT);
-    println!("part1: {}", num_rules_matched(&input));
+    println!("part1: {}", num_rules_matched(&input, false));
+    println!("part2: {}", num_rules_matched(&input, true));
 }
 
-fn num_rules_matched(input: &Input) -> usize {
+fn num_rules_matched(input: &Input, part2_twist: bool) -> usize {
     input
         .input_strings
         .iter()
-        .filter(|input_string| rules_match_input_string(&input.rules, input_string))
+        .filter(|input_string| rules_match_input_string(&input.rules, input_string, part2_twist))
         .count()
 }
 
-fn rules_match_input_string(rules: &HashMap<usize, Rule>, input: &str) -> bool {
+fn rules_match_input_string(rules: &HashMap<usize, Rule>, input: &str, part2_twist: bool) -> bool {
     let input_chars: Vec<char> = input.chars().collect();
-    let (matched, input_index) = rule_matches(0, rules, 0, &input_chars);
-    //println!("matched: {}, input_index: {}", matched, input_index);
+    let (matched, input_index) = rule_matches(0, rules, 0, &input_chars, part2_twist);
     matched && input_index == input_chars.len()
 }
 
-fn rule_matches(rule_index: usize, rules: &HashMap<usize, Rule>, input_index: usize, input: &[char]) -> (bool, usize) {
-    //println!("rule_matches. rule_index: {}, rule: {:?}, input_index: {}", rule_index, rules[rule_index], input_index);
+fn rule_matches(rule_index: usize, rules: &HashMap<usize, Rule>, input_index: usize, input: &[char], part2_twist: bool) -> (bool, usize) {
+    if input_index >= input.len() {
+        return (false, input_index);
+    }
+
+    //println!("rule_matches. rule_index: {}, rule: {:?}, input_index: {}", rule_index, rules[&rule_index], input_index);
+
+    // The part two twist is to change these two rules:
+    // 8: 42 | 42 8
+    // 11: 42 31 | 42 11 31
+    //
+    // In the part 2 example and my input, rule 0 is "0: 8 11". Both
+    // rules 8 and 11 match 42 in succession. Also, rules 8 and 11 are
+    // _only_ referenced in rule 0, so we should just handle rule 0
+    // special.
+    //
+    // Rule 0 expanded looks like "(42 | 42 8) (42 31 | 42 11 31)". We
+    // match 42 n times, and then we match 31 m times. We succeed when
+    // n >= m + 1 and m >= 1 (so n >= 2).
+    if part2_twist && rule_index == 0 {
+        let mut input_index = input_index;
+
+        let mut times_rule_42_matched = 0;
+        loop {
+            let (matched, new_input_index) = rule_matches(42, rules, input_index, input, part2_twist);
+            if !matched {
+                break;
+            }
+            input_index = new_input_index;
+            times_rule_42_matched += 1;
+        }
+        if times_rule_42_matched < 2 {
+            return (false, input_index);
+        }
+
+        let mut times_rule_31_matched = 0;
+        loop {
+            let (matched, new_input_index) = rule_matches(31, rules, input_index, input, part2_twist);
+            if !matched {
+                break;
+            }
+            input_index = new_input_index;
+            times_rule_31_matched += 1;
+        }
+
+        if times_rule_31_matched < 1 {
+            return (false, input_index);
+        }
+
+        return (times_rule_42_matched >= times_rule_31_matched + 1, input_index);
+    }
+
     match &rules[&rule_index] {
         Rule::Literal(c) => {
             (input[input_index] == *c, input_index + 1)
@@ -31,7 +81,7 @@ fn rule_matches(rule_index: usize, rules: &HashMap<usize, Rule>, input_index: us
                 //println!("testing alt: {:?}", alt);
                 let mut alt_input_index = input_index;
                 for sub_rule in alt {
-                    let (matched, new_input_index) = rule_matches(*sub_rule, rules, alt_input_index, input);
+                    let (matched, new_input_index) = rule_matches(*sub_rule, rules, alt_input_index, input, part2_twist);
                     if !matched {
                         continue 'alt_outer;
                     }
@@ -98,7 +148,7 @@ fn parse_input(input: &str) -> Input {
     Input { rules, input_strings }
 }
 
-const _EXAMPLE: &str = r#"0: 4 1 5
+const _EXAMPLE1: &str = r#"0: 4 1 5
 1: 2 3 | 3 2
 2: 4 4 | 5 5
 3: 4 5 | 5 4
@@ -110,6 +160,54 @@ bababa
 abbbab
 aaabbb
 aaaabbb"#;
+
+const _EXAMPLE2: &str = r#"42: 9 14 | 10 1
+9: 14 27 | 1 26
+10: 23 14 | 28 1
+1: "a"
+11: 42 31
+5: 1 14 | 15 1
+19: 14 1 | 14 14
+12: 24 14 | 19 1
+16: 15 1 | 14 14
+31: 14 17 | 1 13
+6: 14 14 | 1 14
+2: 1 24 | 14 4
+0: 8 11
+13: 14 3 | 1 12
+15: 1 | 14
+17: 14 2 | 1 7
+23: 25 1 | 22 14
+28: 16 1
+4: 1 1
+20: 14 14 | 1 15
+3: 5 14 | 16 1
+27: 1 6 | 14 18
+14: "b"
+21: 14 1 | 1 14
+25: 1 1 | 1 14
+22: 14 14
+8: 42
+26: 14 22 | 1 20
+18: 15 15
+7: 14 5 | 1 21
+24: 14 1
+
+abbbbbabbbaaaababbaabbbbabababbbabbbbbbabaaaa
+bbabbbbaabaabba
+babbbbaabbbbbabbbbbbaabaaabaaa
+aaabbbbbbaaaabaababaabababbabaaabbababababaaa
+bbbbbbbaaaabbbbaaabbabaaa
+bbbababbbbaaaaaaaabbababaaababaabab
+ababaaaaaabaaab
+ababaaaaabbbaba
+baabbaaaabbaaaababbaababb
+abbbbabbbbaaaababbbbbbaaaababb
+aaaaabbaabaaaaababaa
+aaaabbaaaabbaaa
+aaaabbaabbaaaaaaabbbabbbaaabbaabaaa
+babaaabbbaaabaababbaabababaaab
+aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba"#;
 
 const INPUT: &str = r#"94: 118 64 | 22 34
 21: 16 64 | 49 34
