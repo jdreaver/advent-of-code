@@ -4,11 +4,20 @@ fn main() {
     let part1 = input
         .iter()
         .map(|line| corrupted_line_score(&line))
-        .sum::<u32>();
+        .sum::<u64>();
     println!("part1: {}", part1);
+
+    let mut completion_scores: Vec<u64> = input
+        .iter()
+        .map(|line| incomplete_line_score(&line))
+        .filter(|&score| score > 0)
+        .collect();
+    completion_scores.sort();
+    let part2 = completion_scores[completion_scores.len() / 2];
+    println!("part2: {}", part2);
 }
 
-fn corrupted_line_score(line: &[Delim]) -> u32 {
+fn corrupted_line_score(line: &[Delim]) -> u64 {
     let mut open_delim_stack: Vec<&DelimType> = Vec::new();
     for delim in line {
         match delim {
@@ -26,12 +35,44 @@ fn corrupted_line_score(line: &[Delim]) -> u32 {
     0
 }
 
-fn corrupt_char_score(delim_type: &DelimType) -> u32 {
+fn corrupt_char_score(delim_type: &DelimType) -> u64 {
     match delim_type {
         DelimType::Paren => 3,
         DelimType::SquareBracket => 57,
         DelimType::CurlyBracket => 1197,
         DelimType::AngleBracket => 25137,
+    }
+}
+
+fn incomplete_line_score(line: &[Delim]) -> u64 {
+    let mut open_delim_stack: Vec<&DelimType> = Vec::new();
+    for delim in line {
+        match delim {
+            Delim::Open(delim_type) => {
+                open_delim_stack.push(delim_type);
+            },
+            Delim::Close(delim_type) => {
+                let last_open = open_delim_stack.pop().expect("no open delims left!");
+                if last_open != delim_type {
+                    return 0;
+                }
+            },
+        }
+    }
+
+    let mut score = 0;
+    for delim in open_delim_stack.iter().rev() {
+        score = score * 5 + completion_char_score(delim);
+    }
+    score
+}
+
+fn completion_char_score(delim_type: &DelimType) -> u64 {
+    match delim_type {
+        DelimType::Paren => 1,
+        DelimType::SquareBracket => 2,
+        DelimType::CurlyBracket => 3,
+        DelimType::AngleBracket => 4,
     }
 }
 
