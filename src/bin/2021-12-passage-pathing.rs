@@ -3,15 +3,18 @@ use std::collections::HashMap;
 fn main() {
     let cave = parse_input(INPUT);
 
-    let part1 = count_paths(&cave);
+    let part1 = count_paths(&cave, false);
     println!("part1: {}", part1);
+
+    let part2 = count_paths(&cave, true);
+    println!("part2: {}", part2);
 }
 
-fn count_paths(cave: &Cave) -> usize {
-    count_paths_inner(cave, &Node::Start, &mut HashMap::new())
+fn count_paths(cave: &Cave, part2: bool) -> usize {
+    count_paths_inner(cave, &Node::Start, &mut HashMap::new(), part2)
 }
 
-fn count_paths_inner(cave: &Cave, node: &Node, seen_count: &HashMap<Node, usize>) -> usize {
+fn count_paths_inner(cave: &Cave, node: &Node, seen_count: &HashMap<Node, usize>, part2: bool) -> usize {
     let next = cave.get(node).expect("couldn't find node in cave!");
     let mut count = 0;
 
@@ -25,13 +28,26 @@ fn count_paths_inner(cave: &Cave, node: &Node, seen_count: &HashMap<Node, usize>
                 if seen_count.get(child).is_none() {
                     let mut child_seen = seen_count.clone();
                     child_seen.insert(child.clone(), 1);
-                    count += count_paths_inner(cave, child, &child_seen);
+                    count += count_paths_inner(cave, child, &child_seen, part2);
+                } else if part2 {
+                    let small_visited_twice = seen_count
+                        .iter()
+                        .any(|(k, v)| match k {
+                            Node::Small(_) => *v == 2,
+                            _ => false,
+                        });
+                    if !small_visited_twice {
+                        let mut child_seen = seen_count.clone();
+                        child_seen.insert(child.clone(), 2);
+                        count += count_paths_inner(cave, child, &child_seen, part2);
+                    }
+
                 }
             }
             Node::Large(_) => {
                 let mut child_seen = seen_count.clone();
                 child_seen.insert(child.clone(), 1);
-                count += count_paths_inner(cave, child, &child_seen);
+                count += count_paths_inner(cave, child, &child_seen, part2);
             }
         }
     }
