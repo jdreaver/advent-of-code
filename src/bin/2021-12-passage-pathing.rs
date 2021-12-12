@@ -11,7 +11,7 @@ fn main() {
 }
 
 fn count_paths(cave: &Cave, part2: bool) -> usize {
-    count_paths_inner(cave, &Node::Start, &mut HashMap::new(), part2)
+    count_paths_inner(cave, &Node::Start, &HashMap::new(), part2)
 }
 
 fn count_paths_inner(cave: &Cave, node: &Node, seen_count: &HashMap<Node, usize>, part2: bool) -> usize {
@@ -70,8 +70,8 @@ fn parse_input(input: &str) -> Cave {
         let (node_a_str, node_b_str) = line.split_once("-").expect("no - in line");
         let node_a = parse_node(node_a_str);
         let node_b = parse_node(node_b_str);
-        cave.entry(node_a.clone()).or_insert(Vec::new()).push(node_b.clone());
-        cave.entry(node_b).or_insert(Vec::new()).push(node_a);
+        cave.entry(node_a.clone()).or_insert_with(Vec::new).push(node_b.clone());
+        cave.entry(node_b).or_insert_with(Vec::new).push(node_a);
     }
     cave
 }
