@@ -9,12 +9,27 @@ fn main() {
 }
 
 fn find_non_allergen_ingredient_count(lists: &[IngredientList]) -> usize {
+    let allergen_ingredients = possible_allergen_ingredients(lists);
+
+    let mut all_allergen_ingredients: HashSet<&String> = HashSet::new();
+    for this_allergen_ingredients in allergen_ingredients.values() {
+        all_allergen_ingredients.extend(this_allergen_ingredients);
+    }
+
     let mut ingredient_counts: HashMap<&String, usize> = HashMap::new();
+    for ingredient in lists.iter().flat_map(|list| &list.ingredients) {
+        *ingredient_counts.entry(ingredient).or_insert(0) += 1;
+    }
+    ingredient_counts
+        .iter()
+        .filter(|(ingredient, _)| !all_allergen_ingredients.contains(*ingredient))
+        .map(|(_, count)| count)
+        .sum()
+}
+
+fn possible_allergen_ingredients(lists: &[IngredientList]) -> HashMap<&String, HashSet<&String>> {
     let mut allergen_ingredients: HashMap<&String, HashSet<&String>> = HashMap::new();
     for list in lists {
-        for ingredient in &list.ingredients {
-            *ingredient_counts.entry(ingredient).or_insert(0) += 1;
-        }
         let ingredients_set = HashSet::from_iter(&list.ingredients);
         for allergen in &list.allergens {
             allergen_ingredients
@@ -23,17 +38,7 @@ fn find_non_allergen_ingredient_count(lists: &[IngredientList]) -> usize {
                 .retain(|i| ingredients_set.contains(i));
         }
     }
-
-    let mut all_allergen_ingredients: HashSet<&String> = HashSet::new();
-    for (_, this_allergen_ingredients) in &allergen_ingredients {
-        all_allergen_ingredients.extend(this_allergen_ingredients);
-    }
-
-    ingredient_counts
-        .iter()
-        .filter(|(ingredient, _)| !all_allergen_ingredients.contains(*ingredient))
-        .map(|(_, count)| count)
-        .sum()
+    allergen_ingredients
 }
 
 #[derive(Debug)]
