@@ -6,6 +6,9 @@ fn main() {
 
     let part1 = find_non_allergen_ingredient_count(&ingredients);
     println!("part1: {}", part1);
+
+    let part2 = canonical_dangerous_ingredient_list(&ingredients);
+    println!("part2: {}", part2);
 }
 
 fn find_non_allergen_ingredient_count(lists: &[IngredientList]) -> usize {
@@ -39,6 +42,39 @@ fn possible_allergen_ingredients(lists: &[IngredientList]) -> HashMap<&String, H
         }
     }
     allergen_ingredients
+}
+
+fn canonical_dangerous_ingredient_list(lists: &[IngredientList]) -> String {
+    let mapping = find_allergen_ingredients(&lists);
+    let mut allergens: Vec<&String> = mapping.keys().cloned().collect();
+    allergens.sort();
+    allergens
+        .iter()
+        .map(|allergen| mapping[allergen].clone())
+        .collect::<Vec<String>>()
+        .join(",")
+}
+
+fn find_allergen_ingredients(lists: &[IngredientList]) -> HashMap<&String, &String> {
+    let mut allergen_ingredients = possible_allergen_ingredients(lists);
+
+    let mut final_mapping: HashMap<&String, &String> = HashMap::new();
+    while !allergen_ingredients.is_empty() {
+        let (&allergen, ingredients) = allergen_ingredients
+            .iter()
+            .filter(|&(_, i)| i.len() == 1)
+            .nth(0)
+            .expect("couldn't find allergen with only 1 possibility!");
+        let ingredient: &String = ingredients.iter().nth(0).unwrap();
+        final_mapping.insert(allergen, ingredient);
+        allergen_ingredients.remove(allergen);
+
+        for ingredients in allergen_ingredients.values_mut() {
+            ingredients.remove(ingredient);
+        }
+    }
+
+    final_mapping
 }
 
 #[derive(Debug)]
