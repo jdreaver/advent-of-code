@@ -2,10 +2,9 @@ use std::collections::HashSet;
 
 fn main() {
     let input = parse_input(INPUT);
-    println!("{}", input.dots.len());
 
-    println!("first fold {:?}", input.folds[0]);
-    println!("{}", apply_fold(&input.dots, &input.folds[0]).len());
+    let part1 = apply_fold(&input.dots, &input.folds[0]).len();
+    println!("part1: {}", part1);
 }
 
 fn apply_fold(dots: &HashSet<(usize, usize)>, fold: &Fold) -> HashSet<(usize, usize)> {
@@ -14,7 +13,7 @@ fn apply_fold(dots: &HashSet<(usize, usize)>, fold: &Fold) -> HashSet<(usize, us
         Fold::X(fold_x) => {
             for (x, y) in dots.iter() {
                 if *x > *fold_x {
-                    let new_x = *x - fold_x + 1;
+                    let new_x = *fold_x - (*x - fold_x);
                     new_dots.insert((new_x, *y));
                 } else if *x < *fold_x {
                     new_dots.insert((*x, *y));
@@ -24,7 +23,7 @@ fn apply_fold(dots: &HashSet<(usize, usize)>, fold: &Fold) -> HashSet<(usize, us
         Fold::Y(fold_y) => {
             for (x, y) in dots.iter() {
                 if *y > *fold_y {
-                    let new_y = *y - fold_y + 1;
+                    let new_y = *fold_y - (*y - fold_y);
                     new_dots.insert((*x, new_y));
                 } else if *y < *fold_y {
                     new_dots.insert((*x, *y));
