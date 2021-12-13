@@ -5,6 +5,16 @@ fn main() {
 
     let part1 = apply_fold(&input.dots, &input.folds[0]).len();
     println!("part1: {}", part1);
+
+    let part2 = apply_all_folds(&input);
+    print_dots(&part2);
+}
+
+fn apply_all_folds(input: &Input) -> HashSet<(usize, usize)> {
+    input
+        .folds
+        .iter()
+        .fold(input.dots.clone(), |dots, fold| apply_fold(&dots, fold))
 }
 
 fn apply_fold(dots: &HashSet<(usize, usize)>, fold: &Fold) -> HashSet<(usize, usize)> {
@@ -44,6 +54,27 @@ struct Input {
 enum Fold {
     X(usize),
     Y(usize),
+}
+
+fn print_dots(dots: &HashSet<(usize, usize)>) {
+    let mut max_x = 0;
+    let mut max_y = 0;
+    for (x, y) in dots {
+        max_x = std::cmp::max(*x, max_x);
+        max_y = std::cmp::max(*y, max_y);
+    }
+
+    for y in 0..=max_y {
+        for x in 0..=max_x {
+            if dots.contains(&(x, y)) {
+                print!("#");
+            } else {
+                print!(".");
+            }
+        }
+        println!("");
+    }
+    println!("");
 }
 
 fn parse_input(input: &str) -> Input {
