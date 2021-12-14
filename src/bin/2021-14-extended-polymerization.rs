@@ -2,17 +2,13 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 fn main() {
-    let input = parse_input(_EXAMPLE);
+    let input = parse_input(INPUT);
     println!("part1: {}", compute_solution(&input, 10));
-    // TODO: times out, too much memory, need different algo
-    //println!("part2: {}", compute_solution(&input, 40));
-
-    println!("{:?}", polymer_steps_count_pairs(&input.template, &input.rules, 1));
+    println!("part2: {}", compute_solution(&input, 40));
 }
 
 fn compute_solution(input: &Input, steps: usize) -> usize {
-    let output = polymer_steps(&input.template, &input.rules, steps);
-    let counts = char_counts(&output);
+    let counts = polymer_steps_count_pairs(&input.template, &input.rules, steps);
     let mut sorted_counts = counts
         .iter()
         .map(|(_, &count)| count)
@@ -22,27 +18,6 @@ fn compute_solution(input: &Input, steps: usize) -> usize {
     let max_count = sorted_counts.last().expect("last elem");
     let min_count = sorted_counts[0];
     max_count - min_count
-}
-
-fn polymer_steps(start: &[char], rules: &[Rule], num_steps: usize) -> Vec<char> {
-    let pair_results = rules
-        .iter()
-        .map(|rule| (rule.pair, rule.result))
-        .collect::<HashMap<_, _>>();
-
-    let mut output = start.to_vec();
-    for i in 0..num_steps {
-        println!("i: {}, len: {}", i, output.len());
-        let mut new_output = vec![output[0]];
-        for (a, b) in output.iter().tuple_windows() {
-            let replacement = pair_results.get(&(*a, *b)).expect("couldn't find replacement");
-            new_output.push(*replacement);
-            new_output.push(*b);
-        }
-        output = new_output;
-    }
-
-    output
 }
 
 fn polymer_steps_count_pairs(start: &[char], rules: &[Rule], num_steps: usize) -> HashMap<char, usize> {
@@ -66,22 +41,46 @@ fn polymer_steps_count_pairs(start: &[char], rules: &[Rule], num_steps: usize) -
         pair_counts = new_pair_counts;
     }
 
-    // TODO: This double counts characters
+    // Only count second character for each pair, but add 1 for the
+    // first character (which never changes).
     let mut char_counts = HashMap::new();
-    for ((a, b), count) in pair_counts {
-        *char_counts.entry(a).or_insert(0) += count;
+    char_counts.insert(start[0], 1);
+    for ((_, b), count) in pair_counts {
+        //*char_counts.entry(a).or_insert(0) += count;
         *char_counts.entry(b).or_insert(0) += count;
     }
     char_counts
 }
 
-fn char_counts(chars: &[char]) -> HashMap<&char, usize> {
-    let mut counts = HashMap::new();
-    for c in chars.iter() {
-        *counts.entry(c).or_insert(0) += 1;
-    }
-    counts
-}
+// Old, naive solution that rebuild the vector every time
+// fn polymer_steps(start: &[char], rules: &[Rule], num_steps: usize) -> Vec<char> {
+//     let pair_results = rules
+//         .iter()
+//         .map(|rule| (rule.pair, rule.result))
+//         .collect::<HashMap<_, _>>();
+
+//     let mut output = start.to_vec();
+//     for i in 0..num_steps {
+//         println!("i: {}, len: {}", i, output.len());
+//         let mut new_output = vec![output[0]];
+//         for (a, b) in output.iter().tuple_windows() {
+//             let replacement = pair_results.get(&(*a, *b)).expect("couldn't find replacement");
+//             new_output.push(*replacement);
+//             new_output.push(*b);
+//         }
+//         output = new_output;
+//     }
+
+//     output
+// }
+
+// fn char_counts(chars: &[char]) -> HashMap<&char, usize> {
+//     let mut counts = HashMap::new();
+//     for c in chars.iter() {
+//         *counts.entry(c).or_insert(0) += 1;
+//     }
+//     counts
+// }
 
 #[derive(Debug)]
 struct Input {
