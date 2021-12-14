@@ -2,10 +2,12 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 fn main() {
-    let input = parse_input(INPUT);
+    let input = parse_input(_EXAMPLE);
     println!("part1: {}", compute_solution(&input, 10));
     // TODO: times out, too much memory, need different algo
     //println!("part2: {}", compute_solution(&input, 40));
+
+    println!("{:?}", polymer_steps_count_pairs(&input.template, &input.rules, 1));
 }
 
 fn compute_solution(input: &Input, steps: usize) -> usize {
@@ -29,7 +31,8 @@ fn polymer_steps(start: &[char], rules: &[Rule], num_steps: usize) -> Vec<char> 
         .collect::<HashMap<_, _>>();
 
     let mut output = start.to_vec();
-    for _ in 0..num_steps {
+    for i in 0..num_steps {
+        println!("i: {}, len: {}", i, output.len());
         let mut new_output = vec![output[0]];
         for (a, b) in output.iter().tuple_windows() {
             let replacement = pair_results.get(&(*a, *b)).expect("couldn't find replacement");
@@ -40,6 +43,36 @@ fn polymer_steps(start: &[char], rules: &[Rule], num_steps: usize) -> Vec<char> 
     }
 
     output
+}
+
+fn polymer_steps_count_pairs(start: &[char], rules: &[Rule], num_steps: usize) -> HashMap<char, usize> {
+    let pair_results = rules
+        .iter()
+        .map(|rule| (rule.pair, rule.result))
+        .collect::<HashMap<_, _>>();
+
+    let mut pair_counts: HashMap<(char, char), usize> = HashMap::new();
+    for (a, b) in start.iter().tuple_windows() {
+        *pair_counts.entry((*a, *b)).or_insert(0) += 1;
+    }
+
+    for _ in 0..num_steps {
+        let mut new_pair_counts: HashMap<(char, char), usize> = HashMap::new();
+        for (pair, count) in pair_counts {
+            let &replacement = pair_results.get(&pair).expect("couldn't find replacement");
+            *new_pair_counts.entry((pair.0, replacement)).or_insert(0) += count;
+            *new_pair_counts.entry((replacement, pair.1)).or_insert(0) += count;
+        }
+        pair_counts = new_pair_counts;
+    }
+
+    // TODO: This double counts characters
+    let mut char_counts = HashMap::new();
+    for ((a, b), count) in pair_counts {
+        *char_counts.entry(a).or_insert(0) += count;
+        *char_counts.entry(b).or_insert(0) += count;
+    }
+    char_counts
 }
 
 fn char_counts(chars: &[char]) -> HashMap<&char, usize> {
