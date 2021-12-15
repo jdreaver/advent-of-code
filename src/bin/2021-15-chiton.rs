@@ -7,7 +7,7 @@ fn main() {
     let part1 = shortest_path(&input);
     println!("part1: {}", part1);
 
-    let expanded = expand_grid(&input, 2); // TODO: Change to 5 once optimized
+    let expanded = expand_grid(&input, 5);
     let part2 = shortest_path(&expanded);
     println!("part2: {}", part2);
 }
@@ -37,17 +37,25 @@ fn shortest_path(grid: &[Vec<u32>]) -> u32 {
 
         // Explore all nodes after this node (we could likely memoize
         // each path's already-visited nodes if we want)
+        let mut neighbors = Vec::new();
         if i > 0 {
-            heap.push((Reverse(path_dist + grid[i - 1][j]), (i - 1, j)));
+            neighbors.push((i - 1, j));
         }
         if i < grid.len() - 1 {
-            heap.push((Reverse(path_dist + grid[i + 1][j]), (i + 1, j)));
+            neighbors.push((i + 1, j));
         }
         if j > 0 {
-            heap.push((Reverse(path_dist + grid[i][j - 1]), (i, j - 1)));
+            neighbors.push((i, j - 1));
         }
         if j < grid[0].len() - 1 {
-            heap.push((Reverse(path_dist + grid[i][j + 1]), (i, j + 1)));
+            neighbors.push((i, j + 1));
+        }
+        for (i, j) in neighbors {
+            let this_path_dist = path_dist + grid[i][j];
+            if this_path_dist < best_dist[i][j] {
+                best_dist[i][j] = this_path_dist;
+                heap.push((Reverse(this_path_dist), (i, j)));
+            }
         }
     }
 
