@@ -1,5 +1,5 @@
 use std::collections::BinaryHeap;
-use std::cmp::Reverse;
+use std::cmp::Ordering;
 
 fn main() {
     let input = parse_input(INPUT);
@@ -12,6 +12,32 @@ fn main() {
     println!("part2: {}", part2);
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct PathState {
+    // A* heuristic is distance from goal plus manhattan distance to
+    // end.
+    astar_heuristic: usize,
+    total_distance: u32,
+    position: (usize, usize),
+}
+
+// The priority queue depends on `Ord`. Explicitly implement the trait
+// so the queue becomes a min-heap instead of a max-heap.
+impl Ord for PathState {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Notice that the we flip the ordering on costs.
+        // In case of a tie we compare positions - this step is necessary
+        // to make implementations of `PartialEq` and `Ord` consistent.
+        other.astar_heuristic.cmp(&self.astar_heuristic)
+    }
+}
+
+impl PartialOrd for PathState {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 fn shortest_path(grid: &[Vec<u32>]) -> u32 {
     // Record distance to each position so far so we can cut off long
     // paths early
@@ -19,24 +45,23 @@ fn shortest_path(grid: &[Vec<u32>]) -> u32 {
 
     let goal: (usize, usize) = (grid.len() - 1, grid[0].len() - 1);
 
-    let mut heap: BinaryHeap<(Reverse<u32>, (usize, usize))> = BinaryHeap::new();
-    heap.push((Reverse(0), (0, 0)));
 
-    while let Some((Reverse(path_dist), (i, j))) = heap.pop() {
-        // If we already found a better way to this position, abandon
-        // this path
-        if path_dist > best_dist[i][j] {
-            continue;
-        }
-        best_dist[i][j] = path_dist;
+    let mut heap: BinaryHeap<PathState> = BinaryHeap::new();
+    heap.push(PathState {
+        astar_heuristic: grid.len() - 1 + grid[0].len() - 1,
+        total_distance: 0,
+        position: (0, 0),
+    });
 
+    while let Some(state) = heap.pop() {
         // If we reach the goal, return
-        if (i, j) == goal {
-            return path_dist
+        if state.position == goal {
+            return state.total_distance
         }
 
         // Explore all nodes after this node (we could likely memoize
         // each path's already-visited nodes if we want)
+        let (i, j) = state.position;
         let mut neighbors = Vec::new();
         if i > 0 {
             neighbors.push((i - 1, j));
@@ -51,10 +76,16 @@ fn shortest_path(grid: &[Vec<u32>]) -> u32 {
             neighbors.push((i, j + 1));
         }
         for (i, j) in neighbors {
-            let this_path_dist = path_dist + grid[i][j];
+            let this_path_dist = state.total_distance + grid[i][j];
+            // If we already found a better way to this position, abandon
+            // this path
             if this_path_dist < best_dist[i][j] {
                 best_dist[i][j] = this_path_dist;
-                heap.push((Reverse(this_path_dist), (i, j)));
+                heap.push(PathState {
+                    astar_heuristic: this_path_dist as usize + grid.len() - 1 - i + grid[0].len() - 1 - j,
+                    total_distance: this_path_dist,
+                    position: (i, j),
+                });
             }
         }
     }
