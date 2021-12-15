@@ -6,6 +6,10 @@ fn main() {
 
     let part1 = shortest_path(&input);
     println!("part1: {}", part1);
+
+    let expanded = expand_grid(&input, 2); // TODO: Change to 5 once optimized
+    let part2 = shortest_path(&expanded);
+    println!("part2: {}", part2);
 }
 
 fn shortest_path(grid: &[Vec<u32>]) -> u32 {
@@ -48,6 +52,23 @@ fn shortest_path(grid: &[Vec<u32>]) -> u32 {
     }
 
     panic!("could not get to end!")
+}
+
+fn expand_grid(grid: &[Vec<u32>], n: usize) -> Vec<Vec<u32>> {
+    let mut expanded = vec![vec![0; grid[0].len() * n]; grid.len() * n];
+
+    for i in 0..grid.len() {
+        for j in 0..grid[0].len() {
+            for k in 0..n {
+                for l in 0..n {
+                    let x = (grid[i][j] + k as u32 + l as u32 - 1).rem_euclid(9) + 1;
+                    expanded[i + k * grid.len()][j + l * grid[0].len()] = x;
+                }
+            }
+        }
+    }
+
+    expanded
 }
 
 fn parse_input(input: &str) -> Vec<Vec<u32>> {
