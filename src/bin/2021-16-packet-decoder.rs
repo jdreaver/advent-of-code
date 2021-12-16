@@ -1,6 +1,7 @@
 fn main() {
     let packet = parse_packet(INPUT);
     println!("part1: {}", version_sum(&packet));
+    println!("part2: {}", eval_packet(&packet));
 }
 
 fn version_sum(packet: &Packet) -> u64 {
@@ -22,6 +23,57 @@ fn test_version_sum() {
     assert_eq!(version_sum(&parse_packet(INPUT)), 953);
 }
 
+fn eval_packet(packet: &Packet) -> u64 {
+    match &packet.packet_type {
+        PacketType::Literal(x) => *x,
+        PacketType::Operator { op_type, sub_packets } => match op_type {
+          OpType::Sum => sub_packets
+                .iter()
+                .map(eval_packet)
+                .sum(),
+          OpType::Product => sub_packets
+                .iter()
+                .map(eval_packet)
+                .product(),
+          OpType::Minimum => sub_packets
+                .iter()
+                .map(eval_packet)
+                .min()
+                .unwrap(),
+          OpType::Maximum => sub_packets
+                .iter()
+                .map(eval_packet)
+                .max()
+                .unwrap(),
+          OpType::GreaterThan => {
+              assert_eq!(sub_packets.len(), 2);
+              (eval_packet(&sub_packets[0]) > eval_packet(&sub_packets[1])) as u64
+          },
+          OpType::LessThan => {
+              assert_eq!(sub_packets.len(), 2);
+              (eval_packet(&sub_packets[0]) < eval_packet(&sub_packets[1])) as u64
+          },
+          OpType::EqualTo => {
+              assert_eq!(sub_packets.len(), 2);
+              (eval_packet(&sub_packets[0]) == eval_packet(&sub_packets[1])) as u64
+          },
+        },
+    }
+}
+
+#[test]
+fn test_eval_packet() {
+    assert_eq!(eval_packet(&parse_packet("C200B40A82")), 3);
+    assert_eq!(eval_packet(&parse_packet("04005AC33890")), 54);
+    assert_eq!(eval_packet(&parse_packet("880086C3E88112")), 7);
+    assert_eq!(eval_packet(&parse_packet("CE00C43D881120")), 9);
+    assert_eq!(eval_packet(&parse_packet("D8005AC2A8F0")), 1);
+    assert_eq!(eval_packet(&parse_packet("F600BC2D8F")), 0);
+    assert_eq!(eval_packet(&parse_packet("9C005AC2F8F0")), 0);
+    assert_eq!(eval_packet(&parse_packet("9C0141080250320F1802104A08")), 1);
+    assert_eq!(eval_packet(&parse_packet(INPUT)), 246225449979);
+}
+
 #[derive(Debug, PartialEq)]
 struct Packet {
     version: u64,
@@ -32,9 +84,20 @@ struct Packet {
 enum PacketType {
     Literal(u64),
     Operator {
-        op_type: u64,
+        op_type: OpType,
         sub_packets: Vec<Packet>,
     }
+}
+
+#[derive(Debug, PartialEq)]
+enum OpType {
+    Sum,
+    Product,
+    Minimum,
+    Maximum,
+    GreaterThan,
+    LessThan,
+    EqualTo,
 }
 
 fn parse_packet(hex_str: &str) -> Packet {
@@ -70,7 +133,7 @@ fn test_parse_packet() {
     assert_eq!(parse_packet("38006F45291200"), Packet {
         version: 1,
         packet_type: PacketType::Operator {
-            op_type: 6,
+            op_type: OpType::LessThan,
             sub_packets: vec![
                 Packet {
                     version: 6,
@@ -86,7 +149,7 @@ fn test_parse_packet() {
     assert_eq!(parse_packet("EE00D40C823060"), Packet {
         version: 7,
         packet_type: PacketType::Operator {
-            op_type: 3,
+            op_type: OpType::Maximum,
             sub_packets: vec![
                 Packet {
                     version: 2,
@@ -177,7 +240,18 @@ fn parse_literal_packet(bin_chars: &[char], pos: &mut usize) -> PacketType {
     PacketType::Literal(value)
 }
 
-fn parse_operator_packet(bin_chars: &[char], pos: &mut usize, op_type: u64) -> PacketType {
+fn parse_operator_packet(bin_chars: &[char], pos: &mut usize, op_num: u64) -> PacketType {
+    let op_type = match op_num {
+        0 => OpType::Sum,
+        1 => OpType::Product,
+        2 => OpType::Minimum,
+        3 => OpType::Maximum,
+        5 => OpType::GreaterThan,
+        6 => OpType::LessThan,
+        7 => OpType::EqualTo,
+        _ => panic!("unknown op type {}", op_num),
+    };
+
     let length_type_id = parse_binary_digit(bin_chars, pos);
     let mut sub_packets = Vec::new();
     if !length_type_id {
