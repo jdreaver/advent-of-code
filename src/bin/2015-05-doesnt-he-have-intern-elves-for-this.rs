@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use itertools::Itertools;
+
 // Part 1
 //
 // Santa needs help figuring out which strings in his text file are
@@ -53,13 +56,14 @@
 // How many strings are nice under these new rules?
 
 fn main() {
-    let solution = INPUT.lines().map(is_string_nice).filter(|&x| x).count();
-    println!("{}", solution);
+    let part1 = INPUT.lines().map(is_string_nice_part1).filter(|&x| x).count();
+    println!("part1: {}", part1);
 
-    // TODO Part 2
+    let part2 = INPUT.lines().map(is_string_nice_part2).filter(|&x| x).count();
+    println!("part2: {}", part2);
 }
 
-fn is_string_nice<S: AsRef<str>>(s: S) -> bool {
+fn is_string_nice_part1<S: AsRef<str>>(s: S) -> bool {
     let num_vowels = s
         .as_ref()
         .chars()
@@ -80,14 +84,47 @@ fn is_string_nice<S: AsRef<str>>(s: S) -> bool {
 }
 
 #[test]
-fn test_is_string_nice() {
-    assert!(is_string_nice("ugknbfddgicrmopn"));
-    assert!(is_string_nice("aaa"));
-    assert!(!is_string_nice("jchzalrnumimnmhp"));
-    assert!(!is_string_nice("haegwjzuvuyypxyu"));
-    assert!(!is_string_nice("dvszwmarrgswjxmb"));
+fn test_is_string_nice_part1() {
+    assert!(is_string_nice_part1("ugknbfddgicrmopn"));
+    assert!(is_string_nice_part1("aaa"));
+    assert!(!is_string_nice_part1("jchzalrnumimnmhp"));
+    assert!(!is_string_nice_part1("haegwjzuvuyypxyu"));
+    assert!(!is_string_nice_part1("dvszwmarrgswjxmb"));
 
-    assert!(is_string_nice("rthkunfaakmwmush"));
+    assert!(is_string_nice_part1("rthkunfaakmwmush"));
+}
+
+fn is_string_nice_part2<S: AsRef<str>>(s: S) -> bool {
+    let mut pair_locations: HashMap<(char, char), Vec<usize>> = HashMap::new();
+    for (i, (x, y)) in s.as_ref().chars().tuple_windows().enumerate() {
+        pair_locations.entry((x, y)).or_insert_with(Vec::new).push(i);
+    }
+
+    let nonoverlapping_pairs = pair_locations
+        .values()
+        .any(|locs| locs
+             .iter()
+             .any(|l| locs[0] + 1 < *l)
+        );
+
+    // println!("pair_locations: {:?}", pair_locations);
+    // println!("nonverlapping_pairs: {}", nonoverlapping_pairs);
+
+    let repeats_with_one_letter_between = s
+        .as_ref()
+        .chars()
+        .tuple_windows()
+        .any(|(x, _, y)| x == y);
+
+    nonoverlapping_pairs && repeats_with_one_letter_between
+}
+
+#[test]
+fn test_is_string_nice_part2() {
+    assert!(is_string_nice_part2("qjhvhtzxzqqjkmpb"));
+    assert!(is_string_nice_part2("xxyxx"));
+    assert!(!is_string_nice_part2("uurcxstgmygtbstg"));
+    assert!(!is_string_nice_part2("ieodomkazucvgmuy"));
 }
 
 const INPUT: &str = "rthkunfaakmwmush
