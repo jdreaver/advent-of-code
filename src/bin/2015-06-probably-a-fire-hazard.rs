@@ -2,9 +2,10 @@ use itertools::Itertools;
 
 fn main() {
     let instructions = parse_input(INPUT);
+
     let mut part1_grid = vec![vec![false; 1000]; 1000];
     for instruction in &instructions {
-        apply_instruction(&mut part1_grid, instruction);
+        apply_instruction_part1(&mut part1_grid, instruction);
     }
     let part1 = part1_grid
         .iter()
@@ -12,15 +13,37 @@ fn main() {
         .filter(|x| **x)
         .count();
     println!("part1: {}", part1);
+
+    let mut part2_grid = vec![vec![0; 1000]; 1000];
+    for instruction in &instructions {
+        apply_instruction_part2(&mut part2_grid, instruction);
+    }
+    let part2 = part2_grid
+        .iter()
+        .flatten()
+        .sum::<u64>();
+    println!("part2: {}", part2);
 }
 
-fn apply_instruction(grid: &mut [Vec<bool>], instruction: &Instruction) {
+fn apply_instruction_part1(grid: &mut [Vec<bool>], instruction: &Instruction) {
     for i in instruction.start.0..=instruction.end.0 {
         for j in instruction.start.1..=instruction.end.1 {
             grid[i][j] = match instruction.instruction_type {
                 InstructionType::Toggle => !grid[i][j],
                 InstructionType::On => true,
                 InstructionType::Off => false,
+            }
+        }
+    }
+}
+
+fn apply_instruction_part2(grid: &mut [Vec<u64>], instruction: &Instruction) {
+    for i in instruction.start.0..=instruction.end.0 {
+        for j in instruction.start.1..=instruction.end.1 {
+            grid[i][j] = match instruction.instruction_type {
+                InstructionType::Toggle => grid[i][j] + 2,
+                InstructionType::On => grid[i][j] + 1,
+                InstructionType::Off => grid[i][j].saturating_sub(1),
             }
         }
     }
