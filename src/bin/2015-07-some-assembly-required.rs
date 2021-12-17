@@ -3,7 +3,27 @@ use std::collections::HashMap;
 fn main() {
     let input = parse_input(INPUT);
     //println!("{:#?}", wire_values(&input));
-    println!("part1: {}", wire_values(&input)["a"]);
+
+    let part1 = wire_values(&input)["a"];
+    println!("part1: {}", part1);
+
+    // Part 2: take the signal you got on wire a, override wire b to
+    // that signal, and reset the other wires (including wire a). What
+    // new signal is ultimately provided to wire a?
+    let part2_conns = input
+        .iter()
+        .map(|conn| if conn.dest == "b" {
+            Conn {
+                signal: Signal::Const(Arg::Const(part1)),
+                dest: "b",
+            }
+        } else {
+            conn.clone()
+        })
+        .collect::<Vec<Conn>>();
+
+    let part2 = wire_values(&part2_conns)["a"];
+    println!("part2: {}", part2);
 }
 
 fn wire_values<'a>(conns: &'a [Conn]) -> HashMap<&'a str, u16> {
@@ -50,13 +70,13 @@ fn arg_value<'a, 'b>(x: &'a Arg, signal_by_dest: &'b HashMap<&'a str, &'a Signal
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Conn<'a> {
     signal: Signal<'a>,
     dest: &'a str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Signal<'a> {
     Const(Arg<'a>),
     And (Arg<'a>, Arg<'a>),
@@ -66,7 +86,7 @@ enum Signal<'a> {
     RShift (Arg<'a>, u8),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Arg<'a> {
     Const(u16),
     Wire(&'a str),
