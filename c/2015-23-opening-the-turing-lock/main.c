@@ -82,7 +82,6 @@ void print_instruction(Instruction *instruction)
 
 REGISTER parse_register(char **input)
 {
-        assert(strlen(*input) > 0);
         switch (*input[0]) {
         case 'a':
                 *input += 1;
@@ -167,6 +166,20 @@ Instruction parse_instruction(char *input)
         return instruction;
 }
 
+uint count_lines(const char *input) {
+        uint count = 1;
+        for (; *input != '\0'; input++) {
+                if (*input == '\n') {
+                        count += 1;
+                }
+        }
+        return count;
+}
+
+const char *TEST_PROGRAM = "inc a\n\
+jio a, +2\n\
+tpl a\n\
+inc a";
 
 const char *REAL_INPUT = "";
 
@@ -187,6 +200,12 @@ int main(int argc, char* argv[])
                 }
         }
 
+        // Test commands
+        printf("sizeof(INSTRUCTION_TYPE) = %zu\n", sizeof(INSTRUCTION_TYPE));
+        printf("sizeof(REGISTER) = %zu\n", sizeof(REGISTER));
+        printf("sizeof(JumpTarget) = %zu\n", sizeof(JumpTarget));
+        printf("sizeof(Instruction) = %zu\n", sizeof(Instruction));
+
         Instruction half_a = parse_instruction("hlf a");
         print_instruction(&half_a);
         Instruction triple_b = parse_instruction("tpl_b");
@@ -197,10 +216,11 @@ int main(int argc, char* argv[])
         jump = parse_instruction("jmp 1234");
         print_instruction(&jump);
 
-        //Instruction jump_if_even = { .type = INST_JUMP_IF_EVEN };
         Instruction jump_if_even = parse_instruction("jie a, -123");
         print_instruction(&jump_if_even);
 
         Instruction jump_if_odd = parse_instruction("jio a, -123");
         print_instruction(&jump_if_odd);
+
+        printf("count_lines %d\n", count_lines(TEST_PROGRAM));
 }
