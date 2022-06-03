@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 typedef enum {
@@ -21,7 +22,7 @@ typedef enum {
 
 typedef struct {
         REGISTER reg;
-        int offset;
+        int32_t offset;
 } JumpTarget;
 
 typedef struct {
@@ -30,7 +31,7 @@ typedef struct {
                 REGISTER half_reg;
                 REGISTER triple_reg;
                 REGISTER increment_reg;
-                int jump_offset;
+                int32_t jump_offset;
                 JumpTarget jump_if_even_target;
                 JumpTarget jump_if_one_target;
         } data;
@@ -95,9 +96,9 @@ REGISTER parse_register(char **input)
         }
 }
 
-int parse_offset(char **input)
+int32_t parse_offset(char **input)
 {
-        int ret;
+        int32_t ret;
         // N.B. %n docs: No input is consumed. The corresponding
         // argument shall be a pointer to signed integer into which is
         // to be written the number of characters read from the input
@@ -213,7 +214,7 @@ InstructionsArray parse_instructions(char *input)
         return instructions;
 }
 
-uint *select_register(uint *reg_a, uint *reg_b, REGISTER reg)
+uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, REGISTER reg)
 {
         switch (reg) {
         case REG_A:
@@ -226,13 +227,13 @@ uint *select_register(uint *reg_a, uint *reg_b, REGISTER reg)
         }
 }
 
-uint simulation(InstructionsArray instructions, uint a_start)
+uint32_t simulation(InstructionsArray instructions, uint32_t a_start)
 {
-        uint reg_a = a_start;
-        uint reg_b = 0;
+        uint32_t reg_a = a_start;
+        uint32_t reg_b = 0;
         size_t pc = 0;
 
-        uint *current_reg;
+        uint32_t *current_reg;
 
         while (pc < instructions.len) {
                 Instruction instruction = instructions.instructions[pc];
@@ -370,9 +371,9 @@ int main(int argc, char* argv[])
         // Actual answer
         InstructionsArray instructions = parse_instructions((char *) REAL_INPUT);
 
-        uint part1 = simulation(instructions, 0);
+        uint32_t part1 = simulation(instructions, 0);
         printf("part1: %u\n", part1);
 
-        uint part2 = simulation(instructions, 1);
+        uint32_t part2 = simulation(instructions, 1);
         printf("part2: %u\n", part2);
 }
