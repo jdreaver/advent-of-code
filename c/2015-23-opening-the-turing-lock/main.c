@@ -11,7 +11,7 @@ typedef enum {
         INST_INCREMENT,
         INST_JUMP,
         INST_JUMP_IF_EVEN,
-        INST_JUMP_IF_ODD,
+        INST_JUMP_IF_ONE,
 } INSTRUCTION_TYPE;
 
 typedef enum {
@@ -32,7 +32,7 @@ typedef struct {
                 REGISTER increment_reg;
                 int jump_offset;
                 JumpTarget jump_if_even_target;
-                JumpTarget jump_if_odd_target;
+                JumpTarget jump_if_one_target;
         } data;
 } Instruction;
 
@@ -71,10 +71,10 @@ void print_instruction(Instruction *instruction)
                 print_register(instruction->data.jump_if_even_target.reg);
                 printf(", offset: %d", instruction->data.jump_if_even_target.offset);
                 break;
-        case INST_JUMP_IF_ODD:
-                printf("INST_JUMP_IF_ODD, data.jump_if_odd_target: { reg: ");
-                print_register(instruction->data.jump_if_odd_target.reg);
-                printf(", offset: %d", instruction->data.jump_if_odd_target.offset);
+        case INST_JUMP_IF_ONE:
+                printf("INST_JUMP_IF_ONE, data.jump_if_one_target: { reg: ");
+                print_register(instruction->data.jump_if_one_target.reg);
+                printf(", offset: %d", instruction->data.jump_if_one_target.offset);
                 break;
         }
         printf(" }\n");
@@ -142,9 +142,9 @@ Instruction parse_instruction(char **input)
 
                 instruction.data.jump_if_even_target.offset = parse_offset(input);
         } else if (strncmp(*input, "jio", 3) == 0) {
-                instruction.type = INST_JUMP_IF_ODD;
+                instruction.type = INST_JUMP_IF_ONE;
                 *input += 4;
-                instruction.data.jump_if_odd_target.reg = parse_register(input);
+                instruction.data.jump_if_one_target.reg = parse_register(input);
 
                 // Assert comma and space
                 assert(*input[0] == ',');
@@ -152,7 +152,7 @@ Instruction parse_instruction(char **input)
                 assert(*input[0] == ' ');
                 *input += 1;
 
-                instruction.data.jump_if_odd_target.offset = parse_offset(input);
+                instruction.data.jump_if_one_target.offset = parse_offset(input);
         } else {
                 fprintf(stderr, "Unknown instruction: %s\b", *input);
                 exit(1);
@@ -213,12 +213,128 @@ InstructionsArray parse_instructions(char *input)
         return instructions;
 }
 
+uint *select_register(uint *reg_a, uint *reg_b, REGISTER reg)
+{
+        switch (reg) {
+        case REG_A:
+                return reg_a;
+        case REG_B:
+                return reg_b;
+        default:
+                fprintf(stderr, "Unknown register: %d\n", reg);
+                exit(1);
+        }
+}
+
+uint simulation(InstructionsArray instructions, uint a_start)
+{
+        uint reg_a = a_start;
+        uint reg_b = 0;
+        size_t pc = 0;
+
+        uint *current_reg;
+
+        while (pc < instructions.len) {
+                Instruction instruction = instructions.instructions[pc];
+
+                // printf("a = %u, b = %u, pc = %lu, ", reg_a, reg_b, pc);
+                // print_instruction(&instruction);
+
+                switch (instruction.type) {
+                case INST_HALF:
+                        current_reg = select_register(&reg_a, &reg_b, instruction.data.half_reg);
+                        *current_reg /= 2;
+                        pc++;
+                        break;
+                case INST_TRIPLE:
+                        current_reg = select_register(&reg_a, &reg_b, instruction.data.triple_reg);
+                        *current_reg *= 3;
+                        pc++;
+                        break;
+                case INST_INCREMENT:
+                        current_reg = select_register(&reg_a, &reg_b, instruction.data.increment_reg);
+                        *current_reg += 1;
+                        pc++;
+                        break;
+                case INST_JUMP:
+                        pc += instruction.data.jump_offset;
+                        break;
+                case INST_JUMP_IF_EVEN:
+                        current_reg = select_register(&reg_a, &reg_b, instruction.data.jump_if_even_target.reg);
+                        if (*current_reg % 2 == 0) {
+                                pc += instruction.data.jump_if_even_target.offset;
+                        } else {
+                                pc++;
+                        }
+                        break;
+                case INST_JUMP_IF_ONE:
+                        current_reg = select_register(&reg_a, &reg_b, instruction.data.jump_if_one_target.reg);
+                        if (*current_reg == 1) {
+                                pc += instruction.data.jump_if_one_target.offset;
+                        } else {
+                                pc++;
+                        }
+                        break;
+                }
+        }
+
+        return reg_b;
+}
+
 const char *TEST_INPUT = "inc a\n\
 jio a, +2\n\
 tpl a\n\
 inc a";
 
-const char *REAL_INPUT = "";
+const char *REAL_INPUT = "jio a, +19\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+tpl a\n\
+tpl a\n\
+inc a\n\
+inc a\n\
+tpl a\n\
+tpl a\n\
+inc a\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+inc a\n\
+tpl a\n\
+jmp +23\n\
+tpl a\n\
+tpl a\n\
+inc a\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+inc a\n\
+tpl a\n\
+inc a\n\
+inc a\n\
+tpl a\n\
+tpl a\n\
+inc a\n\
+jio a, +8\n\
+inc b\n\
+jie a, +4\n\
+tpl a\n\
+inc a\n\
+jmp +2\n\
+hlf a\n\
+jmp -7";
 
 int run_tests()
 {
@@ -245,15 +361,18 @@ int main(int argc, char* argv[])
 
         char *hlf_a_input = "hlf a";
         Instruction half_a = parse_instruction(&hlf_a_input);
+        print_instruction(&half_a);
 
         char *jie_input = "jie a, -123";
         Instruction jump_if_even = parse_instruction(&jie_input);
         print_instruction(&jump_if_even);
 
-        InstructionsArray instructions = parse_instructions(TEST_INPUT);
+        // Actual answer
+        InstructionsArray instructions = parse_instructions((char *) REAL_INPUT);
 
-        printf("instructions:\n");
-        for (size_t i = 0; i < instructions.len; i++) {
-                print_instruction(&instructions.instructions[i]);
-        }
+        uint part1 = simulation(instructions, 0);
+        printf("part1: %u\n", part1);
+
+        uint part2 = simulation(instructions, 1);
+        printf("part2: %u\n", part2);
 }
