@@ -109,74 +109,111 @@ int parse_offset(char **input)
         return ret;
 }
 
-Instruction parse_instruction(char *input)
+Instruction parse_instruction(char **input)
 {
-        char *rest = input;
-
         // Match based on instruction name
         Instruction instruction;
-        if (strncmp(rest, "hlf", 3) == 0) {
+        if (strncmp(*input, "hlf", 3) == 0) {
                 instruction.type = INST_HALF;
-                rest += 4;
-                instruction.data.half_reg = parse_register(&rest);
-        } else if (strncmp(rest, "tpl", 3) == 0) {
+                *input += 4;
+                instruction.data.half_reg = parse_register(input);
+        } else if (strncmp(*input, "tpl", 3) == 0) {
                 instruction.type = INST_TRIPLE;
-                rest += 4;
-                instruction.data.triple_reg = parse_register(&rest);
-        } else if (strncmp(rest, "inc", 3) == 0) {
+                *input += 4;
+                instruction.data.triple_reg = parse_register(input);
+        } else if (strncmp(*input, "inc", 3) == 0) {
                 instruction.type = INST_INCREMENT;
-                rest += 4;
-                instruction.data.increment_reg = parse_register(&rest);
-        } else if (strncmp(rest, "jmp", 3) == 0) {
+                *input += 4;
+                instruction.data.increment_reg = parse_register(input);
+        } else if (strncmp(*input, "jmp", 3) == 0) {
                 instruction.type = INST_JUMP;
-                rest += 4;
-                instruction.data.jump_offset = parse_offset(&rest);
-        } else if (strncmp(rest, "jie", 3) == 0) {
+                *input += 4;
+                instruction.data.jump_offset = parse_offset(input);
+        } else if (strncmp(*input, "jie", 3) == 0) {
                 instruction.type = INST_JUMP_IF_EVEN;
-                rest += 4;
-                instruction.data.jump_if_even_target.reg = parse_register(&rest);
+                *input += 4;
+                instruction.data.jump_if_even_target.reg = parse_register(input);
 
                 // Assert comma and space
-                assert(rest[0] == ',');
-                rest += 1;
-                assert(rest[0] == ' ');
-                rest += 1;
+                assert(*input[0] == ',');
+                *input += 1;
+                assert(*input[0] == ' ');
+                *input += 1;
 
-                instruction.data.jump_if_even_target.offset = parse_offset(&rest);
-        } else if (strncmp(rest, "jio", 3) == 0) {
+                instruction.data.jump_if_even_target.offset = parse_offset(input);
+        } else if (strncmp(*input, "jio", 3) == 0) {
                 instruction.type = INST_JUMP_IF_ODD;
-                rest += 4;
-                instruction.data.jump_if_odd_target.reg = parse_register(&rest);
+                *input += 4;
+                instruction.data.jump_if_odd_target.reg = parse_register(input);
 
                 // Assert comma and space
-                assert(rest[0] == ',');
-                rest += 1;
-                assert(rest[0] == ' ');
-                rest += 1;
+                assert(*input[0] == ',');
+                *input += 1;
+                assert(*input[0] == ' ');
+                *input += 1;
 
-                instruction.data.jump_if_odd_target.offset = parse_offset(&rest);
+                instruction.data.jump_if_odd_target.offset = parse_offset(input);
         } else {
-                fprintf(stderr, "Unknown instruction: %s\b", rest);
+                fprintf(stderr, "Unknown instruction: %s\b", *input);
                 exit(1);
         }
-
-        // Assert no more input
-        assert(rest[0] == '\0');
 
         return instruction;
 }
 
-uint count_lines(const char *input) {
-        uint count = 1;
-        for (; *input != '\0'; input++) {
-                if (*input == '\n') {
-                        count += 1;
-                }
-        }
-        return count;
+// Auto expanding array of instructions.
+typedef struct {
+        size_t len;
+        size_t capacity;
+        Instruction *instructions;
+} InstructionsArray;
+
+InstructionsArray instructions_array_create()
+{
+        size_t capacity = 2;
+        Instruction *instructions = malloc(capacity * sizeof(*instructions));
+        InstructionsArray array = {
+                .len = 0,
+                .capacity = capacity,
+                .instructions = instructions,
+        };
+        return array;
 }
 
-const char *TEST_PROGRAM = "inc a\n\
+void instructions_array_append(InstructionsArray *instructions, Instruction instruction)
+{
+        if (instructions->capacity == instructions->len) {
+                instructions->capacity *= 2;
+                size_t new_size = instructions->capacity * sizeof(InstructionsArray);
+                instructions->instructions = realloc(instructions->instructions, new_size);
+        }
+
+        instructions->instructions[instructions->len] = instruction;
+        instructions->len += 1;
+}
+
+InstructionsArray parse_instructions(char *input)
+{
+        InstructionsArray instructions = instructions_array_create();
+
+        char **input_ptr = &input;
+        while (1) {
+                instructions_array_append(&instructions, parse_instruction(input_ptr));
+
+                if (**input_ptr == '\0') {
+                        break;
+                } else if (**input_ptr == '\n') {
+                        *input_ptr += 1;
+                } else {
+                        fprintf(stderr, "Unexpected rest of input: %s\n", *input_ptr);
+                        exit(1);
+                }
+        }
+
+        return instructions;
+}
+
+const char *TEST_INPUT = "inc a\n\
 jio a, +2\n\
 tpl a\n\
 inc a";
@@ -206,21 +243,17 @@ int main(int argc, char* argv[])
         printf("sizeof(JumpTarget) = %zu\n", sizeof(JumpTarget));
         printf("sizeof(Instruction) = %zu\n", sizeof(Instruction));
 
-        Instruction half_a = parse_instruction("hlf a");
-        print_instruction(&half_a);
-        Instruction triple_b = parse_instruction("tpl_b");
-        print_instruction(&triple_b);
+        char *hlf_a_input = "hlf a";
+        Instruction half_a = parse_instruction(&hlf_a_input);
 
-        Instruction jump = parse_instruction("jmp -345");
-        print_instruction(&jump);
-        jump = parse_instruction("jmp 1234");
-        print_instruction(&jump);
-
-        Instruction jump_if_even = parse_instruction("jie a, -123");
+        char *jie_input = "jie a, -123";
+        Instruction jump_if_even = parse_instruction(&jie_input);
         print_instruction(&jump_if_even);
 
-        Instruction jump_if_odd = parse_instruction("jio a, -123");
-        print_instruction(&jump_if_odd);
+        InstructionsArray instructions = parse_instructions(TEST_INPUT);
 
-        printf("count_lines %d\n", count_lines(TEST_PROGRAM));
+        printf("instructions:\n");
+        for (size_t i = 0; i < instructions.len; i++) {
+                print_instruction(&instructions.instructions[i]);
+        }
 }
