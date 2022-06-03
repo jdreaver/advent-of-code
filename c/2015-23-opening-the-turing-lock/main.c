@@ -34,7 +34,7 @@ typedef struct {
                 int32_t jump_offset;
                 JumpTarget jump_if_even_target;
                 JumpTarget jump_if_one_target;
-        } data;
+        };
 } Instruction;
 
 void print_register(REGISTER reg) {
@@ -53,29 +53,29 @@ void print_instruction(Instruction *instruction)
         printf("Instruction { INSTRUCTION_TYPE: ");
         switch (instruction->type) {
         case INST_HALF:
-                printf("INST_HALF, data.half_reg: ");
-                print_register(instruction->data.half_reg);
+                printf("INST_HALF, half_reg: ");
+                print_register(instruction->half_reg);
                 break;
         case INST_TRIPLE:
-                printf("INST_TRIPLE, data.triple_reg: ");
-                print_register(instruction->data.triple_reg);
+                printf("INST_TRIPLE, triple_reg: ");
+                print_register(instruction->triple_reg);
                 break;
         case INST_INCREMENT:
-                printf("INST_INCREMENT, data.increment_reg: ");
-                print_register(instruction->data.increment_reg);
+                printf("INST_INCREMENT, increment_reg: ");
+                print_register(instruction->increment_reg);
                 break;
         case INST_JUMP:
-                printf("INST_JUMP, offset: %d", instruction->data.jump_offset);
+                printf("INST_JUMP, offset: %d", instruction->jump_offset);
                 break;
         case INST_JUMP_IF_EVEN:
-                printf("INST_JUMP_IF_EVEN, data.jump_if_even_target: { reg: ");
-                print_register(instruction->data.jump_if_even_target.reg);
-                printf(", offset: %d", instruction->data.jump_if_even_target.offset);
+                printf("INST_JUMP_IF_EVEN, jump_if_even_target: { reg: ");
+                print_register(instruction->jump_if_even_target.reg);
+                printf(", offset: %d", instruction->jump_if_even_target.offset);
                 break;
         case INST_JUMP_IF_ONE:
-                printf("INST_JUMP_IF_ONE, data.jump_if_one_target: { reg: ");
-                print_register(instruction->data.jump_if_one_target.reg);
-                printf(", offset: %d", instruction->data.jump_if_one_target.offset);
+                printf("INST_JUMP_IF_ONE, jump_if_one_target: { reg: ");
+                print_register(instruction->jump_if_one_target.reg);
+                printf(", offset: %d", instruction->jump_if_one_target.offset);
                 break;
         }
         printf(" }\n");
@@ -117,23 +117,23 @@ Instruction parse_instruction(char **input)
         if (strncmp(*input, "hlf", 3) == 0) {
                 instruction.type = INST_HALF;
                 *input += 4;
-                instruction.data.half_reg = parse_register(input);
+                instruction.half_reg = parse_register(input);
         } else if (strncmp(*input, "tpl", 3) == 0) {
                 instruction.type = INST_TRIPLE;
                 *input += 4;
-                instruction.data.triple_reg = parse_register(input);
+                instruction.triple_reg = parse_register(input);
         } else if (strncmp(*input, "inc", 3) == 0) {
                 instruction.type = INST_INCREMENT;
                 *input += 4;
-                instruction.data.increment_reg = parse_register(input);
+                instruction.increment_reg = parse_register(input);
         } else if (strncmp(*input, "jmp", 3) == 0) {
                 instruction.type = INST_JUMP;
                 *input += 4;
-                instruction.data.jump_offset = parse_offset(input);
+                instruction.jump_offset = parse_offset(input);
         } else if (strncmp(*input, "jie", 3) == 0) {
                 instruction.type = INST_JUMP_IF_EVEN;
                 *input += 4;
-                instruction.data.jump_if_even_target.reg = parse_register(input);
+                instruction.jump_if_even_target.reg = parse_register(input);
 
                 // Assert comma and space
                 assert(*input[0] == ',');
@@ -141,11 +141,11 @@ Instruction parse_instruction(char **input)
                 assert(*input[0] == ' ');
                 *input += 1;
 
-                instruction.data.jump_if_even_target.offset = parse_offset(input);
+                instruction.jump_if_even_target.offset = parse_offset(input);
         } else if (strncmp(*input, "jio", 3) == 0) {
                 instruction.type = INST_JUMP_IF_ONE;
                 *input += 4;
-                instruction.data.jump_if_one_target.reg = parse_register(input);
+                instruction.jump_if_one_target.reg = parse_register(input);
 
                 // Assert comma and space
                 assert(*input[0] == ',');
@@ -153,7 +153,7 @@ Instruction parse_instruction(char **input)
                 assert(*input[0] == ' ');
                 *input += 1;
 
-                instruction.data.jump_if_one_target.offset = parse_offset(input);
+                instruction.jump_if_one_target.offset = parse_offset(input);
         } else {
                 fprintf(stderr, "Unknown instruction: %s\b", *input);
                 exit(1);
@@ -243,35 +243,35 @@ uint32_t simulation(InstructionsArray instructions, uint32_t a_start)
 
                 switch (instruction.type) {
                 case INST_HALF:
-                        current_reg = select_register(&reg_a, &reg_b, instruction.data.half_reg);
+                        current_reg = select_register(&reg_a, &reg_b, instruction.half_reg);
                         *current_reg /= 2;
                         pc++;
                         break;
                 case INST_TRIPLE:
-                        current_reg = select_register(&reg_a, &reg_b, instruction.data.triple_reg);
+                        current_reg = select_register(&reg_a, &reg_b, instruction.triple_reg);
                         *current_reg *= 3;
                         pc++;
                         break;
                 case INST_INCREMENT:
-                        current_reg = select_register(&reg_a, &reg_b, instruction.data.increment_reg);
+                        current_reg = select_register(&reg_a, &reg_b, instruction.increment_reg);
                         *current_reg += 1;
                         pc++;
                         break;
                 case INST_JUMP:
-                        pc += instruction.data.jump_offset;
+                        pc += instruction.jump_offset;
                         break;
                 case INST_JUMP_IF_EVEN:
-                        current_reg = select_register(&reg_a, &reg_b, instruction.data.jump_if_even_target.reg);
+                        current_reg = select_register(&reg_a, &reg_b, instruction.jump_if_even_target.reg);
                         if (*current_reg % 2 == 0) {
-                                pc += instruction.data.jump_if_even_target.offset;
+                                pc += instruction.jump_if_even_target.offset;
                         } else {
                                 pc++;
                         }
                         break;
                 case INST_JUMP_IF_ONE:
-                        current_reg = select_register(&reg_a, &reg_b, instruction.data.jump_if_one_target.reg);
+                        current_reg = select_register(&reg_a, &reg_b, instruction.jump_if_one_target.reg);
                         if (*current_reg == 1) {
-                                pc += instruction.data.jump_if_one_target.offset;
+                                pc += instruction.jump_if_one_target.offset;
                         } else {
                                 pc++;
                         }
