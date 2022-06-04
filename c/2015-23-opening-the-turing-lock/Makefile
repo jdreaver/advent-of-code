@@ -1,10 +1,10 @@
 # Run like "make DEBUG=1 ..." to turn on debugging symbols
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
-    CFLAGS=-g3 -ggdb -DDEBUG -O0
+	CFLAGS=-g3 -ggdb -DDEBUG -O0
 else
 	# -DNDEBUG disables assert. Not cool.
-    # CFLAGS=-DNDEBUG
+	# CFLAGS=-DNDEBUG
 	CFLAGS=
 endif
 
