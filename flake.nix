@@ -19,6 +19,7 @@
           gcc
           gcc.man
           gdb
+          valgrind
         ];
       };
     };
