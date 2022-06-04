@@ -37,7 +37,7 @@ typedef struct {
         };
 } instruction;
 
-void print_register(register_name reg) {
+static void print_register(register_name reg) {
         switch (reg) {
         case REG_A:
                 printf("REG_A");
@@ -48,7 +48,7 @@ void print_register(register_name reg) {
         }
 }
 
-void print_instruction(instruction *instruction)
+static void print_instruction(instruction *instruction)
 {
         printf("Instruction { INSTRUCTION_TYPE: ");
         switch (instruction->type) {
@@ -81,7 +81,7 @@ void print_instruction(instruction *instruction)
         printf(" }\n");
 }
 
-register_name parse_register(char **input)
+static register_name parse_register(char **input)
 {
         switch (*input[0]) {
         case 'a':
@@ -96,7 +96,7 @@ register_name parse_register(char **input)
         }
 }
 
-int32_t parse_offset(char **input)
+static int32_t parse_offset(char **input)
 {
         int32_t ret;
         // N.B. %n docs: No input is consumed. The corresponding
@@ -110,7 +110,7 @@ int32_t parse_offset(char **input)
         return ret;
 }
 
-instruction parse_instruction(char **input)
+static instruction parse_instruction(char **input)
 {
         // Match based on instruction name
         instruction instruction;
@@ -169,7 +169,7 @@ typedef struct {
         instruction *instructions;
 } instructions_array;
 
-instructions_array instructions_array_create()
+static instructions_array instructions_array_create()
 {
         size_t capacity = 2;
         instruction *instructions = malloc(capacity * sizeof(*instructions));
@@ -181,7 +181,7 @@ instructions_array instructions_array_create()
         return array;
 }
 
-void instructions_array_append(instructions_array *instructions, instruction instruction)
+static void instructions_array_append(instructions_array *instructions, instruction instruction)
 {
         if (instructions->capacity == instructions->len) {
                 instructions->capacity *= 2;
@@ -193,7 +193,7 @@ void instructions_array_append(instructions_array *instructions, instruction ins
         instructions->len += 1;
 }
 
-instructions_array parse_instructions(char *input)
+static instructions_array parse_instructions(char *input)
 {
         instructions_array instructions = instructions_array_create();
 
@@ -214,7 +214,7 @@ instructions_array parse_instructions(char *input)
         return instructions;
 }
 
-uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, register_name reg)
+static uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, register_name reg)
 {
         switch (reg) {
         case REG_A:
@@ -227,7 +227,7 @@ uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, register_name reg)
         }
 }
 
-uint32_t simulation(instructions_array instructions, uint32_t a_start)
+static uint32_t simulation(instructions_array instructions, uint32_t a_start)
 {
         uint32_t reg_a = a_start;
         uint32_t reg_b = 0;
@@ -282,12 +282,14 @@ uint32_t simulation(instructions_array instructions, uint32_t a_start)
         return reg_b;
 }
 
-const char *TEST_INPUT = "inc a\n\
+/*
+static const char *TEST_INPUT = "inc a\n\
 jio a, +2\n\
 tpl a\n\
 inc a";
+*/
 
-const char *REAL_INPUT = "jio a, +19\n\
+static const char *REAL_INPUT = "jio a, +19\n\
 inc a\n\
 tpl a\n\
 inc a\n\
@@ -337,7 +339,7 @@ jmp +2\n\
 hlf a\n\
 jmp -7";
 
-int run_tests()
+static int run_tests()
 {
         printf("Tests successful!\n");
         return 0;
