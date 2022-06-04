@@ -6,38 +6,38 @@
 #include <stdint.h>
 #include <string.h>
 
-typedef enum {
+enum instruction_type {
         INST_HALF,
         INST_TRIPLE,
         INST_INCREMENT,
         INST_JUMP,
         INST_JUMP_IF_EVEN,
         INST_JUMP_IF_ONE,
-} instruction_type;
+};
 
-typedef enum {
+enum register_name {
         REG_A,
         REG_B,
-} register_name;
+};
 
-typedef struct {
-        register_name reg;
+struct jump_target {
+        enum register_name reg;
         int32_t offset;
-} jump_target;
+};
 
-typedef struct {
-        instruction_type type;
+struct instruction {
+        enum instruction_type type;
         union {
-                register_name half_reg;
-                register_name triple_reg;
-                register_name increment_reg;
+                enum register_name half_reg;
+                enum register_name triple_reg;
+                enum register_name increment_reg;
                 int32_t jump_offset;
-                jump_target jump_if_even_target;
-                jump_target jump_if_one_target;
+                struct jump_target jump_if_even_target;
+                struct jump_target jump_if_one_target;
         };
-} instruction;
+};
 
-static void print_register(const register_name reg) {
+static void print_register(const enum register_name reg) {
         switch (reg) {
         case REG_A:
                 printf("REG_A");
@@ -48,7 +48,7 @@ static void print_register(const register_name reg) {
         }
 }
 
-static void print_instruction(const instruction *instruction)
+static void print_instruction(const struct instruction *instruction)
 {
         printf("Instruction { INSTRUCTION_TYPE: ");
         switch (instruction->type) {
@@ -81,7 +81,7 @@ static void print_instruction(const instruction *instruction)
         printf(" }\n");
 }
 
-static register_name parse_register(const char **input)
+static enum register_name parse_register(const char **input)
 {
         switch (*input[0]) {
         case 'a':
@@ -110,10 +110,10 @@ static int32_t parse_offset(const char **input)
         return ret;
 }
 
-static instruction parse_instruction(const char **input)
+static struct instruction parse_instruction(const char **input)
 {
         // Match based on instruction name
-        instruction instruction;
+        struct instruction instruction;
         if (strncmp(*input, "hlf", 3) == 0) {
                 instruction.type = INST_HALF;
                 *input += 4;
@@ -163,16 +163,18 @@ static instruction parse_instruction(const char **input)
 }
 
 // Auto expanding array of instructions.
+//
+// N.B. This is a typedef because it is supposed to be opaque.
 typedef struct {
         size_t len;
         size_t capacity;
-        instruction *instructions;
+        struct instruction *instructions;
 } instructions_array;
 
 static instructions_array instructions_array_create()
 {
         size_t capacity = 2;
-        instruction *instructions = malloc(capacity * sizeof(*instructions));
+        struct instruction *instructions = malloc(capacity * sizeof(*instructions));
         instructions_array array = {
                 .len = 0,
                 .capacity = capacity,
@@ -181,7 +183,7 @@ static instructions_array instructions_array_create()
         return array;
 }
 
-static void instructions_array_append(instructions_array *instructions, instruction instruction)
+static void instructions_array_append(instructions_array *instructions, struct instruction instruction)
 {
         if (instructions->capacity == instructions->len) {
                 instructions->capacity *= 2;
@@ -214,7 +216,7 @@ static instructions_array parse_instructions(const char *input)
         return instructions;
 }
 
-static uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, register_name reg)
+static uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, enum register_name reg)
 {
         switch (reg) {
         case REG_A:
@@ -236,7 +238,7 @@ static uint32_t simulation(instructions_array instructions, uint32_t a_start)
         uint32_t *current_reg;
 
         while (pc < instructions.len) {
-                instruction instruction = instructions.instructions[pc];
+                struct instruction instruction = instructions.instructions[pc];
 
                 // printf("a = %u, b = %u, pc = %lu, ", reg_a, reg_b, pc);
                 // print_instruction(&instruction);
@@ -357,18 +359,18 @@ int main(int argc, char* argv[])
         }
 
         // Test commands
-        printf("sizeof(instruction_type) = %zu\n", sizeof(instruction_type));
-        printf("sizeof(register) = %zu\n", sizeof(register_name));
-        printf("sizeof(jump_target) = %zu\n", sizeof(jump_target));
-        printf("sizeof(instruction) = %zu\n", sizeof(instruction));
+        printf("sizeof(instruction_type) = %zu\n", sizeof(enum instruction_type));
+        printf("sizeof(register) = %zu\n", sizeof(enum register_name));
+        printf("sizeof(jump_target) = %zu\n", sizeof(struct jump_target));
+        printf("sizeof(instruction) = %zu\n", sizeof(struct instruction));
         printf("sizeof(instructions_array) = %zu\n", sizeof(instructions_array));
 
         const char *hlf_a_input = "hlf a";
-        instruction half_a = parse_instruction(&hlf_a_input);
+        struct instruction half_a = parse_instruction(&hlf_a_input);
         print_instruction(&half_a);
 
         const char *jie_input = "jie a, -123";
-        instruction jump_if_even = parse_instruction(&jie_input);
+        struct instruction jump_if_even = parse_instruction(&jie_input);
         print_instruction(&jump_if_even);
 
         // Actual answer
