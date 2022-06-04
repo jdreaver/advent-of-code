@@ -13,31 +13,31 @@ typedef enum {
         INST_JUMP,
         INST_JUMP_IF_EVEN,
         INST_JUMP_IF_ONE,
-} INSTRUCTION_TYPE;
+} instruction_type;
 
 typedef enum {
         REG_A,
         REG_B,
-} REGISTER;
+} register_name;
 
 typedef struct {
-        REGISTER reg;
+        register_name reg;
         int32_t offset;
-} JumpTarget;
+} jump_target;
 
 typedef struct {
-        INSTRUCTION_TYPE type;
+        instruction_type type;
         union {
-                REGISTER half_reg;
-                REGISTER triple_reg;
-                REGISTER increment_reg;
+                register_name half_reg;
+                register_name triple_reg;
+                register_name increment_reg;
                 int32_t jump_offset;
-                JumpTarget jump_if_even_target;
-                JumpTarget jump_if_one_target;
+                jump_target jump_if_even_target;
+                jump_target jump_if_one_target;
         };
-} Instruction;
+} instruction;
 
-void print_register(REGISTER reg) {
+void print_register(register_name reg) {
         switch (reg) {
         case REG_A:
                 printf("REG_A");
@@ -48,7 +48,7 @@ void print_register(REGISTER reg) {
         }
 }
 
-void print_instruction(Instruction *instruction)
+void print_instruction(instruction *instruction)
 {
         printf("Instruction { INSTRUCTION_TYPE: ");
         switch (instruction->type) {
@@ -81,7 +81,7 @@ void print_instruction(Instruction *instruction)
         printf(" }\n");
 }
 
-REGISTER parse_register(char **input)
+register_name parse_register(char **input)
 {
         switch (*input[0]) {
         case 'a':
@@ -110,10 +110,10 @@ int32_t parse_offset(char **input)
         return ret;
 }
 
-Instruction parse_instruction(char **input)
+instruction parse_instruction(char **input)
 {
         // Match based on instruction name
-        Instruction instruction;
+        instruction instruction;
         if (strncmp(*input, "hlf", 3) == 0) {
                 instruction.type = INST_HALF;
                 *input += 4;
@@ -166,14 +166,14 @@ Instruction parse_instruction(char **input)
 typedef struct {
         size_t len;
         size_t capacity;
-        Instruction *instructions;
-} InstructionsArray;
+        instruction *instructions;
+} instructions_array;
 
-InstructionsArray instructions_array_create()
+instructions_array instructions_array_create()
 {
         size_t capacity = 2;
-        Instruction *instructions = malloc(capacity * sizeof(*instructions));
-        InstructionsArray array = {
+        instruction *instructions = malloc(capacity * sizeof(*instructions));
+        instructions_array array = {
                 .len = 0,
                 .capacity = capacity,
                 .instructions = instructions,
@@ -181,11 +181,11 @@ InstructionsArray instructions_array_create()
         return array;
 }
 
-void instructions_array_append(InstructionsArray *instructions, Instruction instruction)
+void instructions_array_append(instructions_array *instructions, instruction instruction)
 {
         if (instructions->capacity == instructions->len) {
                 instructions->capacity *= 2;
-                size_t new_size = instructions->capacity * sizeof(InstructionsArray);
+                size_t new_size = instructions->capacity * sizeof(instructions_array);
                 instructions->instructions = realloc(instructions->instructions, new_size);
         }
 
@@ -193,9 +193,9 @@ void instructions_array_append(InstructionsArray *instructions, Instruction inst
         instructions->len += 1;
 }
 
-InstructionsArray parse_instructions(char *input)
+instructions_array parse_instructions(char *input)
 {
-        InstructionsArray instructions = instructions_array_create();
+        instructions_array instructions = instructions_array_create();
 
         char **input_ptr = &input;
         while (1) {
@@ -214,7 +214,7 @@ InstructionsArray parse_instructions(char *input)
         return instructions;
 }
 
-uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, REGISTER reg)
+uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, register_name reg)
 {
         switch (reg) {
         case REG_A:
@@ -227,7 +227,7 @@ uint32_t *select_register(uint32_t *reg_a, uint32_t *reg_b, REGISTER reg)
         }
 }
 
-uint32_t simulation(InstructionsArray instructions, uint32_t a_start)
+uint32_t simulation(instructions_array instructions, uint32_t a_start)
 {
         uint32_t reg_a = a_start;
         uint32_t reg_b = 0;
@@ -236,7 +236,7 @@ uint32_t simulation(InstructionsArray instructions, uint32_t a_start)
         uint32_t *current_reg;
 
         while (pc < instructions.len) {
-                Instruction instruction = instructions.instructions[pc];
+                instruction instruction = instructions.instructions[pc];
 
                 // printf("a = %u, b = %u, pc = %lu, ", reg_a, reg_b, pc);
                 // print_instruction(&instruction);
@@ -355,21 +355,22 @@ int main(int argc, char* argv[])
         }
 
         // Test commands
-        printf("sizeof(INSTRUCTION_TYPE) = %zu\n", sizeof(INSTRUCTION_TYPE));
-        printf("sizeof(REGISTER) = %zu\n", sizeof(REGISTER));
-        printf("sizeof(JumpTarget) = %zu\n", sizeof(JumpTarget));
-        printf("sizeof(Instruction) = %zu\n", sizeof(Instruction));
+        printf("sizeof(instruction_type) = %zu\n", sizeof(instruction_type));
+        printf("sizeof(register) = %zu\n", sizeof(register_name));
+        printf("sizeof(jump_target) = %zu\n", sizeof(jump_target));
+        printf("sizeof(instruction) = %zu\n", sizeof(instruction));
+        printf("sizeof(instructions_array) = %zu\n", sizeof(instructions_array));
 
         char *hlf_a_input = "hlf a";
-        Instruction half_a = parse_instruction(&hlf_a_input);
+        instruction half_a = parse_instruction(&hlf_a_input);
         print_instruction(&half_a);
 
         char *jie_input = "jie a, -123";
-        Instruction jump_if_even = parse_instruction(&jie_input);
+        instruction jump_if_even = parse_instruction(&jie_input);
         print_instruction(&jump_if_even);
 
         // Actual answer
-        InstructionsArray instructions = parse_instructions((char *) REAL_INPUT);
+        instructions_array instructions = parse_instructions((char *) REAL_INPUT);
 
         uint32_t part1 = simulation(instructions, 0);
         printf("part1: %u\n", part1);
