@@ -183,6 +183,12 @@ static instructions_array instructions_array_create()
         return array;
 }
 
+static void instructions_array_destroy(instructions_array *instructions)
+{
+        free(instructions->instructions);
+        return;
+}
+
 static void instructions_array_append(instructions_array *instructions, struct instruction instruction)
 {
         if (instructions->capacity == instructions->len) {
@@ -381,4 +387,6 @@ int main(int argc, char* argv[])
 
         uint32_t part2 = simulation(instructions, 1);
         printf("part2: %u\n", part2);
+
+        instructions_array_destroy(&instructions);
 }
