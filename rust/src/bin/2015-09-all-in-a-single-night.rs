@@ -53,13 +53,16 @@ fn parse_input(input: &str) -> Vec<CityDistance> {
 }
 
 fn parse_city_distance(line: &str) -> CityDistance {
-    let (start, rest) = line.split_once(" to ").expect("failed splitting on ' to '");
-    let (end, distance_str) = rest.split_once(" = ").expect("failed splitting on ' = '");
-    let distance = distance_str.parse::<u64>().expect("failed parsing distance");
-    CityDistance {
-        start: start.to_string(),
-        end: end.to_string(),
-        distance,
+    match line.split_whitespace().collect::<Vec<&str>>()[..] {
+        [start, "to", end, "=", distance_str] => {
+            let distance = distance_str.parse::<u64>().expect("failed parsing distance");
+            CityDistance {
+                start: start.to_string(),
+                end: end.to_string(),
+                distance,
+            }
+        }
+        _ => panic!("invalid input line: {}", line),
     }
 }
 
