@@ -75,6 +75,8 @@ fn key_distances(
         // Check for next steps
         for position in key_distance_next_4(puzzle, &state) {
             let distance = state.distance + 1;
+            // TODO: This clone sucks and is probably bad for performance
+            let seen_keys = state.seen_keys.clone();
 
             match puzzle.tiles[position.y][position.x] {
                 Tile::Wall => continue,
@@ -85,7 +87,7 @@ fn key_distances(
                         distances.insert(c, distance);
                     }
 
-                    let mut new_seen_keys = state.seen_keys.clone();
+                    let mut new_seen_keys = seen_keys.clone();
                     new_seen_keys.insert(c);
                     pending.push(KeyDistanceState {
                         position,
@@ -94,20 +96,18 @@ fn key_distances(
                     });
                 }
                 Tile::Door(c) => {
-                    if state.seen_keys.contains(&c) {
+                    if seen_keys.contains(&c) {
                         pending.push(KeyDistanceState {
                             position,
                             distance,
-                            // TODO: This clone sucks and is probably bad for performance
-                            seen_keys: state.seen_keys.clone(),
+                            seen_keys,
                         });
                     }
                 }
                 Tile::Empty => pending.push(KeyDistanceState {
                     position,
                     distance,
-                    // TODO: This clone sucks and is probably bad for performance
-                    seen_keys: state.seen_keys.clone(),
+                    seen_keys,
                 }),
             }
         }
