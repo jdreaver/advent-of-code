@@ -4,16 +4,11 @@ fn main() {
     let stacks = parse_stacks(INPUT_STACKS);
     let moves = parse_moves(INPUT_MOVES);
     println!("part 1: {}", part1_message(&stacks, &moves));
+    println!("part 2: {}", part2_message(&stacks, &moves));
 }
 
 fn part1_message(stacks: &[Vec<char>], moves: &[Move]) -> String {
-    part1_simulate_moves(stacks, moves)
-        .iter()
-        .map(|stack| {
-            let stack_len = stack.len();
-            stack[stack_len - 1]
-        })
-        .collect()
+    stack_message(&part1_simulate_moves(stacks, moves))
 }
 
 fn part1_simulate_moves(stacks: &[Vec<char>], moves: &[Move]) -> Vec<Vec<char>> {
@@ -27,18 +22,39 @@ fn part1_simulate_moves(stacks: &[Vec<char>], moves: &[Move]) -> Vec<Vec<char>> 
     stacks.to_vec()
 }
 
+fn stack_message(stacks: &[Vec<char>]) -> String {
+    stacks
+        .iter()
+        .map(|stack| {
+            let stack_len = stack.len();
+            stack[stack_len - 1]
+        })
+        .collect()
+}
+
+fn part2_message(stacks: &[Vec<char>], moves: &[Move]) -> String {
+    stack_message(&part2_simulate_moves(stacks, moves))
+}
+
+fn part2_simulate_moves(stacks: &[Vec<char>], moves: &[Move]) -> Vec<Vec<char>> {
+    let mut stacks: Vec<Vec<char>> = stacks.to_vec();
+    for mv in moves {
+        let start_len = stacks[mv.start - 1].len();
+        let moved = stacks[mv.start - 1].split_off(start_len - mv.count);
+        stacks[mv.end - 1].extend_from_slice(&moved);
+    }
+    stacks.to_vec()
+}
+
 #[derive(Debug)]
 struct Move {
-    count: u32,
+    count: usize,
     start: usize,
     end: usize,
 }
 
 fn parse_stacks(stacks: &str) -> Vec<Vec<char>> {
-    stacks
-        .lines()
-        .map(|line| line.chars().collect())
-        .collect()
+    stacks.lines().map(|line| line.chars().collect()).collect()
 }
 
 fn parse_moves(input: &str) -> Vec<Move> {
