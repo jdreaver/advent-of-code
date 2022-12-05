@@ -1,9 +1,11 @@
+use itertools::Itertools;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
 fn main() {
     let rucksacks = parse_input(INPUT);
     println!("part 1: {}", part1_priority_sum(&rucksacks));
+    println!("part 2: {}", part2_priority_sum(&rucksacks));
 }
 
 fn part1_priority_sum(rucksacks: &[Vec<char>]) -> u32 {
@@ -34,6 +36,27 @@ fn char_priority(c: char) -> u32 {
     } else {
         panic!("unknown priority for char {}", c)
     }
+}
+
+fn part2_priority_sum(rucksacks: &[Vec<char>]) -> u32 {
+    rucksacks
+        .iter()
+        .tuples()
+        .map(|(ruck1, ruck2, ruck3)| char_priority(part2_common_element(ruck1, ruck2, ruck3)))
+        .sum()
+}
+
+fn part2_common_element(sack1: &[char], sack2: &[char], sack3: &[char]) -> char {
+    let sack1_set: HashSet<&char> = HashSet::from_iter(sack1.iter());
+    let sack2_set: HashSet<&char> = HashSet::from_iter(sack2.iter());
+    let sack3_set: HashSet<&char> = HashSet::from_iter(sack3.iter());
+
+    let common = sack1_set
+        .iter()
+        .find(|c| sack2_set.contains(*c) && sack3_set.contains(*c))
+        .expect("no common elements");
+
+    **common
 }
 
 fn parse_input(input: &str) -> Vec<Vec<char>> {
