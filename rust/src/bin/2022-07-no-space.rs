@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 fn main() {
     let input = parse_input(_EXAMPLE);
     let commands = post_process_input(&input);
@@ -5,50 +8,49 @@ fn main() {
     println!("{:?}", commands_to_directories(&commands));
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct Directory {
-    parent: Option<Directory>,
-    name: String,
-    children: Vec<DirectoryElement>,
-}
-
-#[derive(Debug, PartialEq)]
-enum DirectoryElement {
-    Directory(Directory),
-    File(File),
+    children: HashMap<String, Box<Directory>>,
+    files: HashMap<String, u32>,
 }
 
 fn commands_to_directories(commands: &[Command]) -> Directory {
     // First command should be "$ cd /"
     assert_eq!(commands[0], Command::CD("/".to_string()));
 
-    let mut top_level = Directory {
-        parent: None,
-        name: "/".to_string(),
-        children: Vec::new(),
+    let mut root = Directory {
+        children: HashMap::new(),
+        files: HashMap::new(),
     };
-    let mut current_directory: &Directory = &top_level;
+    let mut current_path: Vec<&mut Directory> = vec![&mut root];
 
     for command in commands.iter().skip(1) {
         match command {
             Command::CD(dir) => match dir.as_str() {
                 "/" => {
-                    current_directory = &top_level;
+                    current_path = vec![&mut root];
                 }
                 ".." => {
-                    current_directory = current_directory.parent.expect("no parent directory!");
+                    current_path.pop();
                 }
                 _ => {
-                    // TODO: Can't naively make a new directory. Need to keep
-                    // track of children. Might need to mutate filesystem
-                    // "inodes" in place.
+                    // Check if child exists. If not, make it and insert into
+                    // current_directory.children.
+                    let path_len = current_path.len();
+                    let &mut current_directory = current_path[path_len - 1];
+                    let child = current_directory.children.entry(dir.clone()).or_insert(Box::new(Directory{
+                        children: todo!(),
+                        files: todo!(),
+                    }));
+
+                    // TODO: Append child to current_path
                 }
-            }
+            },
             Command::LS(_) => todo!(),
         }
     }
 
-    top_level
+    root
 }
 
 #[derive(Debug, PartialEq)]
