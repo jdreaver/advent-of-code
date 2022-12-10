@@ -1,7 +1,10 @@
+use itertools::Itertools;
+
 fn main() {
     let instructions = parse_input(INPUT);
     let cycles = simulate_cycles(&instructions);
     println!("part 1: {}", part1_signal_strength(&cycles));
+    println!("part 2:\n{}", part2_draw(&cycles));
 }
 
 fn part1_signal_strength(cycles: &[i32]) -> i32 {
@@ -9,6 +12,26 @@ fn part1_signal_strength(cycles: &[i32]) -> i32 {
         .iter()
         .map(|cycle| (*cycle as i32) * cycles[*cycle - 1])
         .sum()
+}
+
+fn part2_draw(cycles: &[i32]) -> String {
+    let pixels: Vec<char> = cycles
+        .iter()
+        .enumerate()
+        .map(|(i, &x)| {
+            let pos = (i % 40) as i32;
+            if pos == x - 1 || pos == x || pos == x + 1 {
+                '#'
+            } else {
+                '.'
+            }
+        })
+        .collect();
+
+    pixels
+        .chunks(40)
+        .map(|chars| chars.iter().collect::<String>())
+        .join("\n")
 }
 
 fn simulate_cycles(instructions: &[Instruction]) -> Vec<i32> {
@@ -24,9 +47,6 @@ fn simulate_cycles(instructions: &[Instruction]) -> Vec<i32> {
             }
         }
     }
-
-    // Add cycle just in case we ended on an addx
-    cycles.push(x);
 
     cycles
 }
