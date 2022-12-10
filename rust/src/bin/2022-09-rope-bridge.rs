@@ -3,38 +3,45 @@ use std::ops::{Add, Sub};
 use itertools::Itertools;
 
 fn main() {
-    let input = parse_input(INPUT);
-    println!("part 1: {}", part1_distinct_tail_locations(&input));
+    let moves = parse_input(_EXAMPLE2);
+    println!("part 1: {}", distinct_tail_locations(&moves, 2));
+    println!("part 2: {}", distinct_tail_locations(&moves, 10));
 }
 
-fn part1_distinct_tail_locations(moves: &[Move]) -> usize {
-    simulate_moves(moves)
-        .iter()
-        .map(|rope| rope.tail)
-        .unique()
-        .count()
+fn distinct_tail_locations(moves: &[Move], rope_length: u8) -> usize {
+    let head_positions = simulate_moves(moves);
+    let mut tail_positions: Vec<Point> = head_positions;
+    (1..rope_length).for_each(|_| {
+        tail_positions = simulate_tail_moves(&tail_positions);
+    });
+    tail_positions.iter().unique().count()
 }
 
-fn simulate_moves(moves: &[Move]) -> Vec<Rope> {
+fn simulate_moves(moves: &[Move]) -> Vec<Point> {
     let directions: Vec<MoveDirection> = moves
         .iter()
         .flat_map(|mv| (0..mv.amount).map(move |_| mv.direction))
         .collect();
 
-    let start = Rope::new();
-    let tail = directions.iter().scan(Rope::new(), |rope, direction| {
-        *rope = rope.simulate_single_move(direction);
-        Some(*rope)
+    let start = Point { x: 0, y: 0 };
+    let tail = directions.iter().scan(start, |pos, direction| {
+        *pos = pos.apply_move(direction);
+        Some(*pos)
     });
-    let mut ropes = vec![start];
-    ropes.extend(tail);
-    ropes
+    let mut points = vec![start];
+    points.extend(tail);
+    points
 }
 
-#[derive(Debug, Clone, Copy)]
-struct Rope {
-    head: Point,
-    tail: Point,
+fn simulate_tail_moves(head_positions: &[Point]) -> Vec<Point> {
+    let start = Point { x: 0, y: 0 };
+    let positions = head_positions.iter().scan(start, |tail_pos, head_pos| {
+        *tail_pos = tail_move(tail_pos, head_pos);
+        Some(*tail_pos)
+    });
+    let mut points = vec![start];
+    points.extend(positions);
+    points
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -65,31 +72,20 @@ impl Sub for Point {
     }
 }
 
-impl Rope {
-    fn new() -> Self {
-        Rope {
-            head: Point { x: 0, y: 0 },
-            tail: Point { x: 0, y: 0 },
+impl Point {
+    fn apply_move(&self, direction: &MoveDirection) -> Point {
+        let (dx, dy) = match direction {
+            MoveDirection::Up => (0, 1),
+            MoveDirection::Right => (1, 0),
+            MoveDirection::Down => (0, -1),
+            MoveDirection::Left => (-1, 0),
+        };
+
+        Point {
+            x: self.x + dx,
+            y: self.y + dy,
         }
     }
-
-    fn simulate_single_move(&self, direction: &MoveDirection) -> Rope {
-        Rope {
-            head: self.head + head_move(direction),
-            tail: tail_move(&self.tail, &self.head),
-        }
-    }
-}
-
-fn head_move(direction: &MoveDirection) -> Point {
-    let (x, y) = match direction {
-        MoveDirection::Up => (0, 1),
-        MoveDirection::Right => (1, 0),
-        MoveDirection::Down => (0, -1),
-        MoveDirection::Left => (-1, 0),
-    };
-
-    Point { x, y }
 }
 
 fn tail_move(tail: &Point, head: &Point) -> Point {
@@ -144,7 +140,7 @@ fn parse_input(input: &str) -> Vec<Move> {
         .collect()
 }
 
-const _EXAMPLE: &str = "R 4
+const _EXAMPLE1: &str = "R 4
 U 4
 L 3
 D 1
@@ -152,6 +148,15 @@ R 4
 D 1
 L 5
 R 2";
+
+const _EXAMPLE2: &str = "R 5
+U 8
+L 8
+D 3
+R 17
+D 10
+L 25
+U 20";
 
 const INPUT: &str = "U 1
 L 2
