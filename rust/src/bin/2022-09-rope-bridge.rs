@@ -22,12 +22,10 @@ fn simulate_moves(moves: &[Move]) -> Vec<Rope> {
         .collect();
 
     let start = Rope::new();
-    let tail = directions
-        .iter()
-        .scan(Rope::new(), |rope, direction| {
-            *rope = rope.simulate_single_move(direction);
-            Some(*rope)
-        });
+    let tail = directions.iter().scan(Rope::new(), |rope, direction| {
+        *rope = rope.simulate_single_move(direction);
+        Some(*rope)
+    });
     let mut ropes = vec![start];
     ropes.extend(tail);
     ropes
@@ -49,7 +47,10 @@ impl Add for Point {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        Self {x: self.x + other.x, y: self.y + other.y}
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
     }
 }
 
@@ -57,54 +58,27 @@ impl Sub for Point {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        Self {x: self.x - other.x, y: self.y - other.y}
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
     }
 }
 
 impl Rope {
     fn new() -> Self {
         Rope {
-            head: Point{ x: 0, y: 0 },
-            tail: Point{ x: 0, y: 0 },
-        }
-    }
-
-    fn tail_position(&self) -> TailPosition {
-        let diff = self.tail - self.head;
-        match (diff.x, diff.y) {
-            (0, 1) => TailPosition::Above,
-            (1, 1) => TailPosition::AboveRight,
-            (1, 0) => TailPosition::Right,
-            (1, -1) => TailPosition::BelowRight,
-            (0, -1) => TailPosition::Below,
-            (-1, -1) => TailPosition::BelowLeft,
-            (-1, 0) => TailPosition::Left,
-            (-1, 1) => TailPosition::AboveLeft,
-            (0, 0) => TailPosition::Covered,
-            pos => panic!("invalid relative tail position {:?}", pos),
+            head: Point { x: 0, y: 0 },
+            tail: Point { x: 0, y: 0 },
         }
     }
 
     fn simulate_single_move(&self, direction: &MoveDirection) -> Rope {
-        //println!("simulate_single_move, self: {:?}, tail_pos: {:?}, dir: {:?}", self, self.tail_position(), direction);
         Rope {
             head: self.head + head_move(direction),
-            tail: self.tail + tail_move(&self.tail_position(), direction),
+            tail: tail_move(&self.tail, &self.head),
         }
     }
-}
-
-#[derive(Debug)]
-enum TailPosition {
-    Above,
-    AboveRight,
-    Right,
-    BelowRight,
-    Below,
-    BelowLeft,
-    Left,
-    AboveLeft,
-    Covered,
 }
 
 fn head_move(direction: &MoveDirection) -> Point {
@@ -118,41 +92,24 @@ fn head_move(direction: &MoveDirection) -> Point {
     Point { x, y }
 }
 
-fn tail_move(tail_pos: &TailPosition, head_direction: &MoveDirection) -> Point {
-    let (x, y) = match (tail_pos, head_direction) {
-        (TailPosition::Above, MoveDirection::Down) => (0, -1),
-        (TailPosition::Above, _) => (0, 0),
-
-        (TailPosition::Right, MoveDirection::Left) => (-1, 0),
-        (TailPosition::Right, _) => (0, 0),
-
-        (TailPosition::Below, MoveDirection::Up) => (0, 1),
-        (TailPosition::Below, _) => (0, 0),
-
-        (TailPosition::Left, MoveDirection::Right) => (1, 0),
-        (TailPosition::Left, _) => (0, 0),
-
-        (TailPosition::AboveRight, MoveDirection::Down) => (-1, -1),
-        (TailPosition::AboveRight, MoveDirection::Left) => (-1, -1),
-        (TailPosition::AboveRight, _) => (0, 0),
-
-        (TailPosition::BelowRight, MoveDirection::Up) => (-1, 1),
-        (TailPosition::BelowRight, MoveDirection::Left) => (-1, 1),
-        (TailPosition::BelowRight, _) => (0, 0),
-
-        (TailPosition::AboveLeft, MoveDirection::Down) => (1, -1),
-        (TailPosition::AboveLeft, MoveDirection::Right) => (1, -1),
-        (TailPosition::AboveLeft, _) => (0, 0),
-
-        (TailPosition::BelowLeft, MoveDirection::Up) => (1, 1),
-        (TailPosition::BelowLeft, MoveDirection::Right) => (1, 1),
-        (TailPosition::BelowLeft, _) => (0, 0),
-
-        // Tail never moves if covered
-        (TailPosition::Covered, _) => (0, 0),
-    };
-
-    Point { x, y }
+fn tail_move(tail: &Point, head: &Point) -> Point {
+    // If there is ever a difference in coordinates more than 1 point in any
+    // direction, we reduce the difference to 1 in that direction, and 0 in the
+    // other direction.
+    let diff = *head - *tail;
+    if diff.x.abs() > 1 {
+        Point {
+            x: tail.x + diff.x.signum(),
+            y: head.y,
+        }
+    } else if diff.y.abs() > 1 {
+        Point {
+            x: head.x,
+            y: tail.y + diff.y.signum(),
+        }
+    } else {
+        *tail
+    }
 }
 
 #[derive(Debug)]
