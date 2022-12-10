@@ -5,6 +5,7 @@ fn main() {
     let commands = post_process_input(&input);
     let file_tree = commands_to_file_tree(&commands);
     println!("part 1: {}", part1_at_most_100000(&file_tree));
+    println!("part 2: {}", part2_smallest_delete(&file_tree));
 }
 
 fn part1_at_most_100000(file_tree: &FileTree) -> u32 {
@@ -12,6 +13,21 @@ fn part1_at_most_100000(file_tree: &FileTree) -> u32 {
         .iter()
         .filter(|size| **size <= 100000)
         .sum()
+}
+
+fn part2_smallest_delete(file_tree: &FileTree) -> u32 {
+    let sizes = directory_sizes(file_tree);
+    let total_disk_space = 70_000_000;
+    let desired_unused_space = 30_000_000;
+    let current_size = sizes[0];
+    let current_unused = total_disk_space - current_size;
+    let min_delete = desired_unused_space - current_unused;
+    // Find smallest directory to delete that gets us to desired unused space
+    *sizes
+        .iter()
+        .filter(|size| **size >= min_delete)
+        .min()
+        .expect("no dirs to delete")
 }
 
 fn directory_sizes(file_tree: &FileTree) -> Vec<u32> {
