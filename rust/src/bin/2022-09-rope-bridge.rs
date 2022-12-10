@@ -13,6 +13,11 @@ fn distinct_tail_locations(moves: &[Move], rope_length: u8) -> usize {
     let mut tail_positions: Vec<Point> = head_positions;
     (1..rope_length).for_each(|_| {
         tail_positions = simulate_tail_moves(&tail_positions);
+        // if _i == 9 {
+        //     for k in 0..tail_positions.len() {
+        //         println!("turn {}: head: {:?}, tail {}: {:?}", k, head_positions[k], _i, tail_positions[k]);
+        //     }
+        // }
     });
     tail_positions.iter().unique().count()
 }
@@ -35,13 +40,10 @@ fn simulate_moves(moves: &[Move]) -> Vec<Point> {
 
 fn simulate_tail_moves(head_positions: &[Point]) -> Vec<Point> {
     let start = Point { x: 0, y: 0 };
-    let positions = head_positions.iter().scan(start, |tail_pos, head_pos| {
+    head_positions.iter().scan(start, |tail_pos, head_pos| {
         *tail_pos = tail_move(tail_pos, head_pos);
         Some(*tail_pos)
-    });
-    let mut points = vec![start];
-    points.extend(positions);
-    points
+    }).collect()
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
