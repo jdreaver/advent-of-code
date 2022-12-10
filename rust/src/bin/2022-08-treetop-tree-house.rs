@@ -1,6 +1,7 @@
 fn main() {
     let input = parse_input(INPUT);
     println!("part 1: {}", part1_num_visible(&input));
+    println!("part 2: {}", part2_max_scenic_score(&input));
 }
 
 fn part1_num_visible(trees: &[Vec<u32>]) -> usize {
@@ -22,25 +23,25 @@ fn visibility_map(trees: &[Vec<u32>]) -> Vec<Vec<bool>> {
     // Iterate rows
     (0..num_rows).for_each(|i| {
         // Left to right
-        iterate_row_or_col((0..num_cols).map(|j| (i, j)), trees, &mut visible);
+        mark_trees_visible((0..num_cols).map(|j| (i, j)), trees, &mut visible);
 
         // Right to left
-        iterate_row_or_col((0..num_cols).rev().map(|j| (i, j)), trees, &mut visible);
+        mark_trees_visible((0..num_cols).rev().map(|j| (i, j)), trees, &mut visible);
     });
 
     // Iterate columns
     (0..num_cols).for_each(|j| {
         // Top to bottom
-        iterate_row_or_col((0..num_rows).map(|i| (i, j)), trees, &mut visible);
+        mark_trees_visible((0..num_rows).map(|i| (i, j)), trees, &mut visible);
 
         // Bottom to top
-        iterate_row_or_col((0..num_rows).rev().map(|i| (i, j)), trees, &mut visible);
+        mark_trees_visible((0..num_rows).rev().map(|i| (i, j)), trees, &mut visible);
     });
 
     visible
 }
 
-fn iterate_row_or_col<I>(indices: I, trees: &[Vec<u32>], visible: &mut [Vec<bool>])
+fn mark_trees_visible<I>(indices: I, trees: &[Vec<u32>], visible: &mut [Vec<bool>])
 where
     I: IntoIterator<Item = (usize, usize)>,
 {
@@ -54,6 +55,50 @@ where
             max_height = trees[i][j];
         }
     }
+}
+
+fn part2_max_scenic_score(trees: &[Vec<u32>]) -> u32 {
+    trees
+        .iter()
+        .enumerate()
+        .map(|(i, row)| {
+            row.iter()
+                .enumerate()
+                .map(|(j, _)| scenic_score(trees, i, j))
+                .max()
+                .expect("no scenic score for row")
+        })
+        .max()
+        .expect("no scenic score at all")
+}
+
+fn scenic_score(trees: &[Vec<u32>], i: usize, j: usize) -> u32 {
+    let num_rows = trees.len();
+    let num_cols = trees[0].len();
+
+    let right = count_visible((j..num_cols).map(|j| (i, j)), trees);
+    let left = count_visible((0..=j).rev().map(|j| (i, j)), trees);
+    let down = count_visible((i..num_rows).map(|i| (i, j)), trees);
+    let up = count_visible((0..=i).rev().map(|i| (i, j)), trees);
+
+    right * left * down * up
+}
+
+fn count_visible<I>(indices: I, trees: &[Vec<u32>]) -> u32
+where
+    I: IntoIterator<Item = (usize, usize)>,
+{
+    let mut iter = indices.into_iter();
+    let (i, j) = iter.next().expect("no first value");
+    let start_height = trees[i][j];
+    let mut count = 0;
+    for (i, j) in iter {
+        count += 1;
+        if trees[i][j] >= start_height {
+            break;
+        }
+    }
+    count
 }
 
 fn parse_input(input: &str) -> Vec<Vec<u32>> {
