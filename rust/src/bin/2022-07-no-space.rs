@@ -1,56 +1,126 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 fn main() {
-    let input = parse_input(_EXAMPLE);
+    let input = parse_input(INPUT);
     let commands = post_process_input(&input);
-    println!("{:?}", commands);
-    println!("{:?}", commands_to_directories(&commands));
+    let file_tree = commands_to_file_tree(&commands);
+    println!("part 1: {}", part1_at_most_100000(&file_tree));
+}
+
+fn part1_at_most_100000(file_tree: &FileTree) -> u32 {
+    directory_sizes(file_tree)
+        .iter()
+        .filter(|size| **size <= 100000)
+        .sum()
+}
+
+fn directory_sizes(file_tree: &FileTree) -> Vec<u32> {
+    let mut sizes = file_tree.directories.iter().map(|_| 0).collect();
+    directory_sizes_inner(file_tree, &mut sizes, 0);
+    sizes
+}
+
+fn directory_sizes_inner(file_tree: &FileTree, sizes: &mut Vec<u32>, dir: usize) -> u32 {
+    if sizes[dir] > 0 {
+        return sizes[dir];
+    }
+
+    let directory = &file_tree.directories[dir];
+    let subdir_size: u32 = directory
+        .children
+        .iter()
+        .map(|(_, subdir)| directory_sizes_inner(file_tree, sizes, *subdir))
+        .sum();
+    let file_size: u32 = directory.files.iter().map(|(_, size)| *size).sum();
+    let size = subdir_size + file_size;
+    sizes[dir] = size;
+    size
+}
+
+#[derive(Debug)]
+struct FileTree {
+    // Index 0 is the root of the file tree
+    directories: Vec<Directory>,
 }
 
 #[derive(Debug)]
 struct Directory {
-    children: HashMap<String, Box<Directory>>,
+    parent: Option<usize>,
+    // String is name, usize is index into FileTree.directories
+    children: HashMap<String, usize>,
     files: HashMap<String, u32>,
 }
 
-fn commands_to_directories(commands: &[Command]) -> Directory {
+impl FileTree {
+    fn new() -> Self {
+        FileTree {
+            directories: vec![Directory {
+                parent: None,
+                children: HashMap::new(),
+                files: HashMap::new(),
+            }],
+        }
+    }
+
+    fn new_directory(&mut self, parent: usize) -> usize {
+        self.directories.push(Directory {
+            parent: Some(parent),
+            children: HashMap::new(),
+            files: HashMap::new(),
+        });
+        self.directories.len() - 1
+    }
+
+    fn parent(&self, node: usize) -> usize {
+        self.directories[node].parent.expect("no parent found")
+    }
+
+    fn get_child_dir(&mut self, parent: usize, dir: &String) -> usize {
+        let dir_entry = &mut self.directories[parent];
+        match dir_entry.children.get(dir) {
+            Some(c) => *c,
+            None => {
+                let c = self.new_directory(parent);
+                self.directories[parent].children.insert(dir.clone(), c);
+                c
+            }
+        }
+    }
+}
+
+fn commands_to_file_tree(commands: &[Command]) -> FileTree {
     // First command should be "$ cd /"
     assert_eq!(commands[0], Command::CD("/".to_string()));
 
-    let mut root = Directory {
-        children: HashMap::new(),
-        files: HashMap::new(),
-    };
-    let mut current_path: Vec<&mut Directory> = vec![&mut root];
+    let mut file_tree = FileTree::new();
+    let mut current_dir: usize = 0;
 
     for command in commands.iter().skip(1) {
         match command {
             Command::CD(dir) => match dir.as_str() {
                 "/" => {
-                    current_path = vec![&mut root];
+                    current_dir = 0;
                 }
                 ".." => {
-                    current_path.pop();
+                    current_dir = file_tree.parent(current_dir);
                 }
                 _ => {
-                    // Check if child exists. If not, make it and insert into
-                    // current_directory.children.
-                    let path_len = current_path.len();
-                    let &mut current_directory = current_path[path_len - 1];
-                    let child = current_directory.children.entry(dir.clone()).or_insert(Box::new(Directory{
-                        children: todo!(),
-                        files: todo!(),
-                    }));
-
-                    // TODO: Append child to current_path
+                    current_dir = file_tree.get_child_dir(current_dir, dir);
                 }
             },
-            Command::LS(_) => todo!(),
+            Command::LS(elems) => elems.iter().for_each(|elem| match elem {
+                LSElement::Dir(dir) => {
+                    file_tree.get_child_dir(current_dir, dir);
+                }
+                LSElement::File(File { name, size }) => {
+                    let dir_entry = &mut file_tree.directories[current_dir];
+                    dir_entry.files.insert(name.clone(), *size);
+                }
+            }),
         }
     }
 
-    root
+    file_tree
 }
 
 #[derive(Debug, PartialEq)]
