@@ -3,7 +3,7 @@ use std::ops::{Add, Sub};
 use itertools::Itertools;
 
 fn main() {
-    let moves = parse_input(_EXAMPLE2);
+    let moves = parse_input(INPUT);
     println!("part 1: {}", distinct_tail_locations(&moves, 2));
     println!("part 2: {}", distinct_tail_locations(&moves, 10));
 }
@@ -95,14 +95,9 @@ fn tail_move(tail: &Point, head: &Point) -> Point {
     // direction, we reduce the difference to 1 in that direction, and 0 in the
     // other direction.
     let diff = *head - *tail;
-    if diff.x.abs() > 1 {
+    if diff.x.abs() > 1 || diff.y.abs() > 1 {
         Point {
             x: tail.x + diff.x.signum(),
-            y: head.y,
-        }
-    } else if diff.y.abs() > 1 {
-        Point {
-            x: head.x,
             y: tail.y + diff.y.signum(),
         }
     } else {
