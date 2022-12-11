@@ -1,10 +1,20 @@
 fn main() {
     let input = parse_input(INPUT);
     println!("part 1: {}", part1_monkey_business(&input));
+    println!("part 2: {}", part2_monkey_business(&input));
 }
 
 fn part1_monkey_business(monkeys: &[Monkey]) -> usize {
-    let mut inspected: Vec<usize> = simulate_rounds(monkeys, 20)
+    monkey_business(monkeys, 20, None)
+}
+
+fn part2_monkey_business(monkeys: &[Monkey]) -> usize {
+    let modulo = monkeys.iter().map(|monkey| monkey.test_divisible).product();
+    monkey_business(monkeys, 10_000, Some(modulo))
+}
+
+fn monkey_business(monkeys: &[Monkey], rounds: usize, modulo: Option<u64>) -> usize {
+    let mut inspected: Vec<usize> = simulate_rounds(monkeys, modulo, rounds)
         .iter()
         .map(|items| items.num_items_inspected)
         .collect();
@@ -14,16 +24,16 @@ fn part1_monkey_business(monkeys: &[Monkey]) -> usize {
     inspected[n - 1] * inspected[n - 2]
 }
 
-fn simulate_rounds(monkeys: &[Monkey], rounds: usize) -> Vec<MonkeyItems> {
+fn simulate_rounds(monkeys: &[Monkey], modulo: Option<u64>, rounds: usize) -> Vec<MonkeyItems> {
     let mut items = monkeys
         .iter()
-        .map(|monkey| MonkeyItems{
+        .map(|monkey| MonkeyItems {
             num_items_inspected: 0,
             objects: monkey.starting_items.clone(),
         })
         .collect::<Vec<MonkeyItems>>();
     (0..rounds).for_each(|_| {
-        items = simulate_round(monkeys, &items);
+        items = simulate_round(monkeys, &items, modulo);
     });
     items
 }
@@ -31,16 +41,25 @@ fn simulate_rounds(monkeys: &[Monkey], rounds: usize) -> Vec<MonkeyItems> {
 #[derive(Debug, Clone)]
 struct MonkeyItems {
     num_items_inspected: usize,
-    objects: Vec<u32>,
+    objects: Vec<u64>,
 }
 
-fn simulate_round(monkeys: &[Monkey], items: &[MonkeyItems]) -> Vec<MonkeyItems> {
+fn simulate_round(
+    monkeys: &[Monkey],
+    items: &[MonkeyItems],
+    modulo: Option<u64>,
+) -> Vec<MonkeyItems> {
     let mut items = items.to_vec();
     monkeys.iter().enumerate().for_each(|(i, monkey)| {
         let mut num_items_inspected = 0;
         items[i].objects.clone().iter().for_each(|object| {
             num_items_inspected += 1;
-            let item = apply_operation(*object, &monkey.operation) / 3;
+            let mut item = apply_operation(*object, &monkey.operation);
+            match modulo {
+                None => item /= 3,
+                Some(m) => item %= m,
+            }
+
             let target = if item % monkey.test_divisible == 0 {
                 monkey.true_target
             } else {
@@ -55,7 +74,7 @@ fn simulate_round(monkeys: &[Monkey], items: &[MonkeyItems]) -> Vec<MonkeyItems>
     items
 }
 
-fn apply_operation(item: u32, op: &Operation) -> u32 {
+fn apply_operation(item: u64, op: &Operation) -> u64 {
     let lhs = item;
     let rhs = match op.rhs {
         OperationRHS::Old => item,
@@ -69,9 +88,9 @@ fn apply_operation(item: u32, op: &Operation) -> u32 {
 
 #[derive(Debug)]
 struct Monkey {
-    starting_items: Vec<u32>,
+    starting_items: Vec<u64>,
     operation: Operation,
-    test_divisible: u32,
+    test_divisible: u64,
     true_target: usize,
     false_target: usize,
 }
@@ -91,7 +110,7 @@ enum Operator {
 #[derive(Debug)]
 enum OperationRHS {
     Old,
-    Num(u32),
+    Num(u64),
 }
 
 fn parse_input(input: &str) -> Vec<Monkey> {
@@ -107,9 +126,9 @@ fn parse_input(input: &str) -> Vec<Monkey> {
             .split_once(": ")
             .expect("no :");
         assert_eq!(starting_items_key, "  Starting items");
-        let starting_items: Vec<u32> = starting_items_str
+        let starting_items: Vec<u64> = starting_items_str
             .split(", ")
-            .map(|s| s.parse::<u32>().expect("no parse item"))
+            .map(|s| s.parse::<u64>().expect("no parse item"))
             .collect();
 
         let (operation_key, operation_str) = lines
@@ -119,23 +138,24 @@ fn parse_input(input: &str) -> Vec<Monkey> {
             .expect("no =");
         assert_eq!(operation_key, "  Operation: new");
 
-        let operation = if let ["old", op_str, rhs_str] = operation_str.split(' ').collect::<Vec<&str>>()[..] {
-            let operator = match op_str {
-                "+" => Operator::Add,
-                "*" => Operator::Multiply,
-                _ => panic!("unknown operator {}", op_str),
-            };
+        let operation =
+            if let ["old", op_str, rhs_str] = operation_str.split(' ').collect::<Vec<&str>>()[..] {
+                let operator = match op_str {
+                    "+" => Operator::Add,
+                    "*" => Operator::Multiply,
+                    _ => panic!("unknown operator {}", op_str),
+                };
 
-            let rhs = if rhs_str == "old" {
-                OperationRHS::Old
+                let rhs = if rhs_str == "old" {
+                    OperationRHS::Old
+                } else {
+                    OperationRHS::Num(rhs_str.parse().expect("no parse RHS num"))
+                };
+
+                Operation { operator, rhs }
             } else {
-                OperationRHS::Num(rhs_str.parse().expect("no parse RHS num"))
+                panic!("no parse operation {}", operation_str)
             };
-
-            Operation { operator, rhs }
-        } else {
-            panic!("no parse operation {}", operation_str)
-        };
 
         let (test_key, test_str) = lines
             .next()
@@ -173,7 +193,7 @@ fn parse_input(input: &str) -> Vec<Monkey> {
             _ => panic!("no parse test str: \"{}\"", test_str),
         };
 
-        monkeys.push(Monkey{
+        monkeys.push(Monkey {
             starting_items,
             operation,
             test_divisible,
