@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::iter::Peekable;
 
 fn main() {
@@ -20,45 +21,27 @@ fn part1(pairs: &[(PacketValue, PacketValue)]) -> usize {
         .sum()
 }
 
-#[derive(Debug, PartialEq)]
-enum OrderDecision {
-    InOrder,
-    NotInOrder,
-    Undecided,
-}
-
 fn packets_in_order(first: &PacketValue, second: &PacketValue) -> bool {
     match packets_in_order_inner(first, second) {
-        OrderDecision::InOrder => true,
-        OrderDecision::NotInOrder => false,
-        OrderDecision::Undecided => panic!("found undecided packets! {:?}, {:?}", first, second),
+        Ordering::Less => true,
+        Ordering::Greater => false,
+        Ordering::Equal => panic!("found undecided packets! {:?}, {:?}", first, second),
     }
 }
 
-fn packets_in_order_inner(first: &PacketValue, second: &PacketValue) -> OrderDecision {
+fn packets_in_order_inner(first: &PacketValue, second: &PacketValue) -> Ordering {
     println!("packets_in_order: {:?}, {:?}", first, second);
     match (first, second) {
-        (PacketValue::Num(x), PacketValue::Num(y)) => match x.cmp(y) {
-            std::cmp::Ordering::Less => OrderDecision::InOrder,
-            std::cmp::Ordering::Greater => OrderDecision::NotInOrder,
-            std::cmp::Ordering::Equal => OrderDecision::Undecided,
-        },
+        (PacketValue::Num(x), PacketValue::Num(y)) => x.cmp(y),
         (PacketValue::List(xs), PacketValue::List(ys)) => {
             for (x, y) in xs.iter().zip(ys) {
-                let decision = packets_in_order_inner(x, y);
-                if decision != OrderDecision::Undecided {
-                    return decision;
+                let ordering = packets_in_order_inner(x, y);
+                if ordering != Ordering::Equal {
+                    return ordering;
                 }
             }
 
-            match xs.len().cmp(&ys.len()) {
-                // Left side ran out first, in order
-                std::cmp::Ordering::Less => OrderDecision::InOrder,
-                // Right side ran out first, not in order
-                std::cmp::Ordering::Greater => OrderDecision::NotInOrder,
-                // No decision, continue
-                std::cmp::Ordering::Equal => OrderDecision::Undecided,
-            }
+            xs.len().cmp(&ys.len())
         }
         (xs @ PacketValue::List(_), y @ PacketValue::Num(_)) => {
             packets_in_order_inner(xs, &PacketValue::List(vec![y.clone()]))
