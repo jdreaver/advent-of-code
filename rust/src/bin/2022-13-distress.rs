@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 fn main() {
-    let input = parse_input(INPUT);
+    let input = parse_input(_EXAMPLE);
     println!("part 1: {}", part1(&input));
 }
 
@@ -9,13 +9,13 @@ fn part1(pairs: &[(PacketValue, PacketValue)]) -> usize {
     pairs
         .iter()
         .enumerate()
-        // .filter(|(i, (first, second))| {
-        //     println!("comparing {}: {:?}, {:?}", i + 1, first, second);
-        //     let result = packets_in_order(first, second);
-        //     println!("result: {}", result);
-        //     result
-        // })
-        .filter(|(_, (first, second))| packets_in_order(first, second))
+        .filter(|(i, (first, second))| {
+            println!("comparing {}: {:?}, {:?}", i + 1, first, second);
+            let result = packets_in_order(first, second);
+            println!("result: {}", result);
+            result
+        })
+        // .filter(|(_, (first, second))| packets_in_order(first, second))
         .map(|(i, _)| i + 1)
         .sum()
 }
@@ -31,35 +31,34 @@ fn packets_in_order(first: &PacketValue, second: &PacketValue) -> bool {
     match packets_in_order_inner(first, second) {
         OrderDecision::InOrder => true,
         OrderDecision::NotInOrder => false,
-        OrderDecision::Undecided => true,
+        OrderDecision::Undecided => panic!("found undecided packets! {:?}, {:?}", first, second),
     }
 }
 
 fn packets_in_order_inner(first: &PacketValue, second: &PacketValue) -> OrderDecision {
-    // println!("packets_in_order: {:?}, {:?}", first, second);
+    println!("packets_in_order: {:?}, {:?}", first, second);
     match (first, second) {
         (PacketValue::Num(x), PacketValue::Num(y)) => match x.cmp(y) {
             std::cmp::Ordering::Less => OrderDecision::InOrder,
-            std::cmp::Ordering::Equal => OrderDecision::Undecided,
             std::cmp::Ordering::Greater => OrderDecision::NotInOrder,
-        }
+            std::cmp::Ordering::Equal => OrderDecision::Undecided,
+        },
         (PacketValue::List(xs), PacketValue::List(ys)) => {
-            for (i, x) in xs.iter().enumerate() {
-                let y = match ys.get(i) {
-                    // Left side ran out first
-                    None => return OrderDecision::NotInOrder,
-                    Some(y) => y,
-                };
+            for (x, y) in xs.iter().zip(ys) {
                 let decision = packets_in_order_inner(x, y);
                 if decision != OrderDecision::Undecided {
                     return decision;
                 }
             }
-            // If left ran out first, we are in order
-            if xs.len() > ys.len() {
-                return OrderDecision::NotInOrder
+
+            match xs.len().cmp(&ys.len()) {
+                // Left side ran out first, in order
+                std::cmp::Ordering::Less => OrderDecision::InOrder,
+                // Right side ran out first, not in order
+                std::cmp::Ordering::Greater => OrderDecision::NotInOrder,
+                // No decision, continue
+                std::cmp::Ordering::Equal => OrderDecision::Undecided,
             }
-            OrderDecision::Undecided
         }
         (xs @ PacketValue::List(_), y @ PacketValue::Num(_)) => {
             packets_in_order_inner(xs, &PacketValue::List(vec![y.clone()]))
