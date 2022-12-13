@@ -2,18 +2,34 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 
+use itertools::Itertools;
+
 fn main() {
     let input = parse_input(INPUT);
-    println!("part 1: {}", min_distance(&input));
+    println!("part 1: {}", part1(&input));
+    println!("part 2: {}", part2(&input));
+}
+
+fn part1(map: &HeightMap) -> Steps {
+    min_distance(map, map.start).expect("no solution to part 1")
+}
+
+fn part2(map: &HeightMap) -> Steps {
+    (0..map.num_rows)
+        .cartesian_product(0..map.num_cols)
+        .filter(|&(i, j)| map.squares[i][j] == 'a')
+        .filter_map(|coords| min_distance(map, coords))
+        .min()
+        .expect("couldn't find min")
 }
 
 type Coords = (usize, usize);
 type Steps = usize;
 
-fn min_distance(map: &HeightMap) -> Steps {
+fn min_distance(map: &HeightMap, start: Coords) -> Option<Steps> {
     let mut visited: HashMap<Coords, Steps> = HashMap::new();
     let mut queue: BinaryHeap<Reverse<(Steps, Coords)>> = BinaryHeap::new();
-    queue.push(Reverse((0, map.start)));
+    queue.push(Reverse((0, start)));
 
     while let Some(Reverse((steps, coords))) = queue.pop() {
         if let Some(&existing_steps) = visited.get(&coords) {
@@ -26,13 +42,13 @@ fn min_distance(map: &HeightMap) -> Steps {
 
         for next in next_steps(coords, map) {
             if next == map.end {
-                return steps + 1
+                return Some(steps + 1);
             }
             queue.push(Reverse((steps + 1, next)));
         }
     }
 
-    panic!("no solution found!");
+    None
 }
 
 fn next_steps(coords: Coords, map: &HeightMap) -> Vec<Coords> {
