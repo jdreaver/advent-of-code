@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::iter::Peekable;
 
 fn main() {
-    let input = parse_input(_EXAMPLE);
+    let input = parse_input(INPUT);
     println!("part 1: {}", part1(&input));
 }
 
@@ -10,13 +10,7 @@ fn part1(pairs: &[(PacketValue, PacketValue)]) -> usize {
     pairs
         .iter()
         .enumerate()
-        .filter(|(i, (first, second))| {
-            println!("comparing {}: {:?}, {:?}", i + 1, first, second);
-            let result = packets_in_order(first, second);
-            println!("result: {}", result);
-            result
-        })
-        // .filter(|(_, (first, second))| packets_in_order(first, second))
+        .filter(|(_, (first, second))| packets_in_order(first, second))
         .map(|(i, _)| i + 1)
         .sum()
 }
@@ -30,7 +24,6 @@ fn packets_in_order(first: &PacketValue, second: &PacketValue) -> bool {
 }
 
 fn packets_in_order_inner(first: &PacketValue, second: &PacketValue) -> Ordering {
-    println!("packets_in_order: {:?}, {:?}", first, second);
     match (first, second) {
         (PacketValue::Num(x), PacketValue::Num(y)) => x.cmp(y),
         (PacketValue::List(xs), PacketValue::List(ys)) => {
@@ -101,10 +94,18 @@ where
             '[' => elems.push(PacketValue::List(parse_packet_list(chars))),
             ',' => continue,
             ']' => return elems,
-            x => elems.push(PacketValue::Num(
-                x.to_digit(10)
-                    .unwrap_or_else(|| panic!("unable to parse num {}", x)),
-            )),
+            c => {
+                let mut num: u32 = c.to_digit(10).expect("couldn't convert digit");
+                while let Some(c) = chars.peek() {
+                    if !c.is_ascii_digit() {
+                        break;
+                    }
+                    let c = chars.next().unwrap();
+                    num *= 10;
+                    num += c.to_digit(10).expect("couldn't convert digit");
+                }
+                elems.push(PacketValue::Num(num));
+            }
         }
     }
 
