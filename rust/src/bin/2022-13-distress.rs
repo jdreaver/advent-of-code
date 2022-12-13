@@ -1,9 +1,11 @@
+use itertools::Itertools;
 use std::cmp::Ordering;
 use std::iter::Peekable;
 
 fn main() {
     let input = parse_input(INPUT);
     println!("part 1: {}", part1(&input));
+    println!("part 2: {}", part2(&input));
 }
 
 fn part1(pairs: &[(PacketValue, PacketValue)]) -> usize {
@@ -16,19 +18,41 @@ fn part1(pairs: &[(PacketValue, PacketValue)]) -> usize {
 }
 
 fn packets_in_order(first: &PacketValue, second: &PacketValue) -> bool {
-    match packets_in_order_inner(first, second) {
+    match compare_packets(first, second) {
         Ordering::Less => true,
         Ordering::Greater => false,
         Ordering::Equal => panic!("found undecided packets! {:?}, {:?}", first, second),
     }
 }
 
-fn packets_in_order_inner(first: &PacketValue, second: &PacketValue) -> Ordering {
+fn part2(pairs: &[(PacketValue, PacketValue)]) -> usize {
+    let mut all_packets: Vec<&PacketValue> = pairs.iter().flat_map(|(x, y)| [x, y]).collect();
+    let nested_2 = PacketValue::List(vec![PacketValue::List(vec![PacketValue::Num(2)])]);
+    all_packets.push(&nested_2);
+    let nested_6 = PacketValue::List(vec![PacketValue::List(vec![PacketValue::Num(6)])]);
+    all_packets.push(&nested_6);
+
+    all_packets.sort_unstable_by(|&x, &y| compare_packets(x, y));
+
+    let (index_2, _) = all_packets
+        .iter()
+        .find_position(|&&x| *x == nested_2)
+        .expect("couldn't find nested_2");
+
+    let (index_6, _) = all_packets
+        .iter()
+        .find_position(|&&x| *x == nested_6)
+        .expect("couldn't find nested_6");
+
+    (index_2 + 1) * (index_6 + 1)
+}
+
+fn compare_packets(first: &PacketValue, second: &PacketValue) -> Ordering {
     match (first, second) {
         (PacketValue::Num(x), PacketValue::Num(y)) => x.cmp(y),
         (PacketValue::List(xs), PacketValue::List(ys)) => {
             for (x, y) in xs.iter().zip(ys) {
-                let ordering = packets_in_order_inner(x, y);
+                let ordering = compare_packets(x, y);
                 if ordering != Ordering::Equal {
                     return ordering;
                 }
@@ -37,15 +61,15 @@ fn packets_in_order_inner(first: &PacketValue, second: &PacketValue) -> Ordering
             xs.len().cmp(&ys.len())
         }
         (xs @ PacketValue::List(_), y @ PacketValue::Num(_)) => {
-            packets_in_order_inner(xs, &PacketValue::List(vec![y.clone()]))
+            compare_packets(xs, &PacketValue::List(vec![y.clone()]))
         }
         (x @ PacketValue::Num(_), ys @ PacketValue::List(_)) => {
-            packets_in_order_inner(&PacketValue::List(vec![x.clone()]), ys)
+            compare_packets(&PacketValue::List(vec![x.clone()]), ys)
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum PacketValue {
     List(Vec<PacketValue>),
     Num(u32),
