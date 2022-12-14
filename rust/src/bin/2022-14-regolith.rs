@@ -6,20 +6,21 @@ fn main() {
     let input = parse_input(INPUT);
     let cave = fill_in_rocks(&input);
     println!("part1: {}", part1_simulate_sand(&cave));
+    println!("part2: {}", part2_simulate_sand(&cave));
 }
 
 fn part1_simulate_sand(cave: &Cave) -> usize {
     let mut cave = cave.clone();
     let mut num_sand = 0;
     loop {
-        if !simulate_one_sand(&mut cave) {
+        if !part1_simulate_one_sand(&mut cave) {
             return num_sand;
         }
         num_sand += 1;
     }
 }
 
-fn simulate_one_sand(cave: &mut Cave) -> bool {
+fn part1_simulate_one_sand(cave: &mut Cave) -> bool {
     let mut x = 500;
     let mut y = 0;
     loop {
@@ -44,6 +45,45 @@ fn simulate_one_sand(cave: &mut Cave) -> bool {
             cave.blocks.insert((x, y));
             return true;
         }
+    }
+}
+
+fn part2_simulate_sand(cave: &Cave) -> usize {
+    let mut cave = cave.clone();
+    let mut num_sand = 0;
+    loop {
+        num_sand += 1;
+        if part2_simulate_one_sand(&mut cave) {
+            return num_sand;
+        }
+    }
+}
+
+fn part2_simulate_one_sand(cave: &mut Cave) -> bool {
+    let mut x = 500;
+    let mut y = 0;
+    loop {
+        if y == cave.max_y + 1 {
+            // There is a wall at (-inf, max_y + 2) -> (inf, max_y + 2)
+        } else if !cave.blocks.contains(&(x, y + 1)) {
+            // Fall down
+            y += 1;
+            continue;
+        } else if !cave.blocks.contains(&(x - 1, y + 1)) {
+            // Fall down left
+            x -= 1;
+            y += 1;
+            continue;
+        } else if !cave.blocks.contains(&(x + 1, y + 1)) {
+            // Fall down right
+            x += 1;
+            y += 1;
+            continue;
+        }
+
+        // We are stuck, stay here
+        cave.blocks.insert((x, y));
+        return x == 500 && y == 0;
     }
 }
 
