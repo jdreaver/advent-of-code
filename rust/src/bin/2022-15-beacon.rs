@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use nom::{
     bytes::complete::tag,
     character::complete::digit1,
@@ -25,12 +23,23 @@ fn part1(readings: &[SensorReading], row: i32) -> usize {
     let mut max_x = first_reading.beacon_y;
     for reading in readings.iter() {
         min_x = std::cmp::min(min_x, reading.beacon_x);
+        min_x = std::cmp::min(min_x, reading.sensor_x);
         max_x = std::cmp::max(max_x, reading.beacon_x);
+        max_x = std::cmp::max(max_x, reading.sensor_x);
     }
+
+    let max_distance = (first_reading.beacon_x - first_reading.sensor_x).abs()
+        + (first_reading.beacon_y - first_reading.sensor_y).abs();
+    min_x -= max_distance;
+    max_x += max_distance;
 
     // Iterate over the row in question
     (min_x..=max_x)
-        .filter(|&x| readings.iter().any(|reading| is_point_impossible(reading, x, row)))
+        .filter(|&x| {
+            readings
+                .iter()
+                .any(|reading| is_point_impossible(reading, x, row))
+        })
         .count()
 }
 
