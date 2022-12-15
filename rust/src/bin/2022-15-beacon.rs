@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use nom::{
     bytes::complete::tag,
     character::complete::digit1,
@@ -7,8 +9,71 @@ use nom::{
 };
 
 fn main() {
-    let readings = parse_input(_EXAMPLE);
-    println!("{:?}", readings);
+    // let readings = parse_input(_EXAMPLE);
+    // let row = 10;
+
+    let readings = parse_input(INPUT);
+    let row = 2000000;
+
+    println!("part 1: {}", part1(&readings, row));
+}
+
+fn part1(readings: &[SensorReading], row: i32) -> usize {
+    let mut cover_sets = readings.iter().map(fill_in_covered);
+    let mut covering = cover_sets.next().unwrap_or_default();
+    cover_sets.for_each(|set| {
+        covering.extend(&set);
+    });
+
+    let &(first_x, first_y) = covering.iter().next().expect("empty covering set");
+    let mut min_x = first_x;
+    let mut max_x = first_x;
+    let mut min_y = first_y;
+    let mut max_y = first_y;
+    for &(x, y) in covering.iter() {
+        min_x = std::cmp::min(min_x, x);
+        max_x = std::cmp::max(max_x, x);
+        min_y = std::cmp::min(min_y, y);
+        max_y = std::cmp::max(max_y, y);
+    }
+
+    (min_x..=max_x)
+        .filter(|&x| covering.contains(&(x, row)))
+        .count()
+}
+
+type Point = (i32, i32);
+
+fn fill_in_covered(reading: &SensorReading) -> HashSet<Point> {
+    let max_distance =
+        (reading.beacon_x - reading.sensor_x).abs() + (reading.beacon_y - reading.sensor_y).abs();
+    // println!("reading: {:?}, max_distance: {}", reading, max_distance);
+
+    let mut covered = HashSet::new();
+    covered.insert((reading.sensor_x, reading.sensor_y));
+
+    for distance in 1..=max_distance {
+        for i in 0..distance {
+            // println!("distance: {}, i: {}, top: ({}, {}), right: ({}, {}), bottom: ({}, {}), left: ({}, {})", distance, i, reading.sensor_x + i, reading.sensor_y + distance - i, reading.sensor_x + distance - i, reading.sensor_y - i, reading.sensor_x - i, reading.sensor_y - distance + i, reading.sensor_x - distance + i, reading.sensor_y + i);
+
+            // Start vertical, go down and to the right
+            covered.insert((reading.sensor_x + i, reading.sensor_y + distance - i));
+
+            // Start right, go down and to the left
+            covered.insert((reading.sensor_x + distance - i, reading.sensor_y - i));
+
+            // Start down, go up and to the left
+            covered.insert((reading.sensor_x - i, reading.sensor_y - distance + i));
+
+            // Start left, go up and to the right
+            covered.insert((reading.sensor_x - distance + i, reading.sensor_y + i));
+        }
+    }
+
+    // Actual beacon doesn't count
+    covered.remove(&(reading.beacon_x, reading.beacon_y));
+
+    covered
 }
 
 #[derive(Debug)]
@@ -72,3 +137,29 @@ Sensor at x=17, y=20: closest beacon is at x=21, y=22
 Sensor at x=16, y=7: closest beacon is at x=15, y=3
 Sensor at x=14, y=3: closest beacon is at x=15, y=3
 Sensor at x=20, y=1: closest beacon is at x=15, y=3";
+
+const INPUT: &str = "Sensor at x=3729579, y=1453415: closest beacon is at x=4078883, y=2522671
+Sensor at x=3662668, y=2749205: closest beacon is at x=4078883, y=2522671
+Sensor at x=257356, y=175834: closest beacon is at x=1207332, y=429175
+Sensor at x=2502777, y=3970934: closest beacon is at x=3102959, y=3443573
+Sensor at x=24076, y=2510696: closest beacon is at x=274522, y=2000000
+Sensor at x=3163363, y=3448163: closest beacon is at x=3102959, y=3443573
+Sensor at x=1011369, y=447686: closest beacon is at x=1207332, y=429175
+Sensor at x=3954188, y=3117617: closest beacon is at x=4078883, y=2522671
+Sensor at x=3480746, y=3150039: closest beacon is at x=3301559, y=3383795
+Sensor at x=2999116, y=3137910: closest beacon is at x=3102959, y=3443573
+Sensor at x=3546198, y=462510: closest beacon is at x=3283798, y=-405749
+Sensor at x=650838, y=1255586: closest beacon is at x=274522, y=2000000
+Sensor at x=3231242, y=3342921: closest beacon is at x=3301559, y=3383795
+Sensor at x=1337998, y=31701: closest beacon is at x=1207332, y=429175
+Sensor at x=1184009, y=3259703: closest beacon is at x=2677313, y=2951659
+Sensor at x=212559, y=1737114: closest beacon is at x=274522, y=2000000
+Sensor at x=161020, y=2251470: closest beacon is at x=274522, y=2000000
+Sensor at x=3744187, y=3722432: closest beacon is at x=3301559, y=3383795
+Sensor at x=2318112, y=2254019: closest beacon is at x=2677313, y=2951659
+Sensor at x=2554810, y=56579: closest beacon is at x=3283798, y=-405749
+Sensor at x=1240184, y=897870: closest beacon is at x=1207332, y=429175
+Sensor at x=2971747, y=2662873: closest beacon is at x=2677313, y=2951659
+Sensor at x=3213584, y=3463821: closest beacon is at x=3102959, y=3443573
+Sensor at x=37652, y=3969055: closest beacon is at x=-615866, y=3091738
+Sensor at x=1804153, y=1170987: closest beacon is at x=1207332, y=429175";
