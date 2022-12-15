@@ -19,62 +19,90 @@ fn main() {
 }
 
 fn part1(readings: &[SensorReading], row: i32) -> usize {
-    let mut cover_sets = readings.iter().map(fill_in_covered);
-    let mut covering = cover_sets.next().unwrap_or_default();
-    cover_sets.for_each(|set| {
-        covering.extend(&set);
-    });
-
-    let &(first_x, first_y) = covering.iter().next().expect("empty covering set");
-    let mut min_x = first_x;
-    let mut max_x = first_x;
-    let mut min_y = first_y;
-    let mut max_y = first_y;
-    for &(x, y) in covering.iter() {
-        min_x = std::cmp::min(min_x, x);
-        max_x = std::cmp::max(max_x, x);
-        min_y = std::cmp::min(min_y, y);
-        max_y = std::cmp::max(max_y, y);
+    // Find bounds for beacons
+    let first_reading = readings.iter().next().expect("empty covering set");
+    let mut min_x = first_reading.beacon_x;
+    let mut max_x = first_reading.beacon_y;
+    for reading in readings.iter() {
+        min_x = std::cmp::min(min_x, reading.beacon_x);
+        max_x = std::cmp::max(max_x, reading.beacon_x);
     }
 
+    // Iterate over the row in question
     (min_x..=max_x)
-        .filter(|&x| covering.contains(&(x, row)))
+        .filter(|&x| readings.iter().any(|reading| is_point_impossible(reading, x, row)))
         .count()
 }
 
-type Point = (i32, i32);
-
-fn fill_in_covered(reading: &SensorReading) -> HashSet<Point> {
-    let max_distance =
-        (reading.beacon_x - reading.sensor_x).abs() + (reading.beacon_y - reading.sensor_y).abs();
-    // println!("reading: {:?}, max_distance: {}", reading, max_distance);
-
-    let mut covered = HashSet::new();
-    covered.insert((reading.sensor_x, reading.sensor_y));
-
-    for distance in 1..=max_distance {
-        for i in 0..distance {
-            // println!("distance: {}, i: {}, top: ({}, {}), right: ({}, {}), bottom: ({}, {}), left: ({}, {})", distance, i, reading.sensor_x + i, reading.sensor_y + distance - i, reading.sensor_x + distance - i, reading.sensor_y - i, reading.sensor_x - i, reading.sensor_y - distance + i, reading.sensor_x - distance + i, reading.sensor_y + i);
-
-            // Start vertical, go down and to the right
-            covered.insert((reading.sensor_x + i, reading.sensor_y + distance - i));
-
-            // Start right, go down and to the left
-            covered.insert((reading.sensor_x + distance - i, reading.sensor_y - i));
-
-            // Start down, go up and to the left
-            covered.insert((reading.sensor_x - i, reading.sensor_y - distance + i));
-
-            // Start left, go up and to the right
-            covered.insert((reading.sensor_x - distance + i, reading.sensor_y + i));
-        }
+fn is_point_impossible(reading: &SensorReading, x: i32, y: i32) -> bool {
+    if x == reading.beacon_x && y == reading.beacon_y {
+        return false;
     }
 
-    // Actual beacon doesn't count
-    covered.remove(&(reading.beacon_x, reading.beacon_y));
+    let sensor_distance =
+        (reading.beacon_x - reading.sensor_x).abs() + (reading.beacon_y - reading.sensor_y).abs();
+    let point_distance = (x - reading.sensor_x).abs() + (y - reading.sensor_y).abs();
 
-    covered
+    point_distance <= sensor_distance
 }
+
+// fn part1(readings: &[SensorReading], row: i32) -> usize {
+//     let mut cover_sets = readings.iter().map(|reading| fill_in_covered(reading));
+//     let mut covering = cover_sets.next().unwrap_or_default();
+//     cover_sets.for_each(|set| {
+//         covering.extend(&set);
+//     });
+//     println!("done with unions");
+
+//     let &(first_x, _) = covering.iter().next().expect("empty covering set");
+//     let mut min_x = first_x;
+//     let mut max_x = first_x;
+//     // let mut min_y = first_y;
+//     // let mut max_y = first_y;
+//     for &(x, _) in covering.iter() {
+//         min_x = std::cmp::min(min_x, x);
+//         max_x = std::cmp::max(max_x, x);
+//         // min_y = std::cmp::min(min_y, y);
+//         // max_y = std::cmp::max(max_y, y);
+//     }
+
+//     println!("starting iter");
+//     (min_x..=max_x)
+//         .filter(|&x| covering.contains(&(x, row)))
+//         .count()
+// }
+
+// type Point = (i32, i32);
+
+// fn fill_in_covered(reading: &SensorReading) -> HashSet<Point> {
+//     println!("doing reading {:?}", reading);
+//     let max_distance =
+//         (reading.beacon_x - reading.sensor_x).abs() + (reading.beacon_y - reading.sensor_y).abs();
+
+//     let mut covered = HashSet::new();
+//     covered.insert((reading.sensor_x, reading.sensor_y));
+
+//     for distance in 1..=max_distance {
+//         for i in 0..distance {
+//             // Start vertical, go down and to the right
+//             covered.insert((reading.sensor_x + i, reading.sensor_y + distance - i));
+
+//             // Start right, go down and to the left
+//             covered.insert((reading.sensor_x + distance - i, reading.sensor_y - i));
+
+//             // Start down, go up and to the left
+//             covered.insert((reading.sensor_x - i, reading.sensor_y - distance + i));
+
+//             // Start left, go up and to the right
+//             covered.insert((reading.sensor_x - distance + i, reading.sensor_y + i));
+//         }
+//     }
+
+//     // Actual beacon doesn't count
+//     covered.remove(&(reading.beacon_x, reading.beacon_y));
+
+//     covered
+// }
 
 #[derive(Debug)]
 struct SensorReading {
