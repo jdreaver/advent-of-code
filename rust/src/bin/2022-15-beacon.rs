@@ -17,19 +17,16 @@ fn main() {
 }
 
 fn part1(readings: &[SensorReading], row: i32) -> usize {
-    // Find bounds for beacons
+    // Find max bounds
     let first_reading = readings.iter().next().expect("empty covering set");
-    let mut min_x = first_reading.beacon_x;
-    let mut max_x = first_reading.beacon_y;
+    let mut min_x = first_reading.beacon.0;
+    let mut max_x = first_reading.beacon.1;
     for reading in readings.iter() {
-        min_x = std::cmp::min(min_x, reading.beacon_x);
-        min_x = std::cmp::min(min_x, reading.sensor_x);
-        max_x = std::cmp::max(max_x, reading.beacon_x);
-        max_x = std::cmp::max(max_x, reading.sensor_x);
+        min_x = std::cmp::min(min_x, reading.sensor.0);
+        max_x = std::cmp::max(max_x, reading.sensor.1);
     }
 
-    let max_distance = (first_reading.beacon_x - first_reading.sensor_x).abs()
-        + (first_reading.beacon_y - first_reading.sensor_y).abs();
+    let max_distance = manhattan_distance(first_reading.beacon, first_reading.sensor);
     min_x -= max_distance;
     max_x += max_distance;
 
@@ -44,13 +41,12 @@ fn part1(readings: &[SensorReading], row: i32) -> usize {
 }
 
 fn is_point_impossible(reading: &SensorReading, x: i32, y: i32) -> bool {
-    if x == reading.beacon_x && y == reading.beacon_y {
+    if (x, y) == reading.beacon {
         return false;
     }
 
-    let sensor_distance =
-        (reading.beacon_x - reading.sensor_x).abs() + (reading.beacon_y - reading.sensor_y).abs();
-    let point_distance = (x - reading.sensor_x).abs() + (y - reading.sensor_y).abs();
+    let sensor_distance = manhattan_distance(reading.sensor, reading.beacon);
+    let point_distance = manhattan_distance(reading.sensor, (x, y));
 
     point_distance <= sensor_distance
 }
@@ -80,8 +76,6 @@ fn is_point_impossible(reading: &SensorReading, x: i32, y: i32) -> bool {
 //         .filter(|&x| covering.contains(&(x, row)))
 //         .count()
 // }
-
-// type Point = (i32, i32);
 
 // fn fill_in_covered(reading: &SensorReading) -> HashSet<Point> {
 //     println!("doing reading {:?}", reading);
@@ -113,12 +107,17 @@ fn is_point_impossible(reading: &SensorReading, x: i32, y: i32) -> bool {
 //     covered
 // }
 
+
+type Point = (i32, i32);
+
+fn manhattan_distance(a: Point, b: Point) -> i32 {
+    (a.0 - b.0).abs() + (a.1 - b.1).abs()
+}
+
 #[derive(Debug)]
 struct SensorReading {
-    sensor_x: i32,
-    sensor_y: i32,
-    beacon_x: i32,
-    beacon_y: i32,
+    sensor: Point,
+    beacon: Point,
 }
 
 fn parse_input(input: &str) -> Vec<SensorReading> {
@@ -144,10 +143,8 @@ fn parse_input_line(input: &str) -> IResult<&str, SensorReading> {
     Ok((
         input,
         SensorReading {
-            sensor_x,
-            sensor_y,
-            beacon_x,
-            beacon_y,
+            sensor: (sensor_x, sensor_y),
+            beacon: (beacon_x, beacon_y),
         },
     ))
 }
