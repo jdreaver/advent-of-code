@@ -1,3 +1,7 @@
+use std::collections::HashSet;
+
+use itertools::Itertools;
+
 use nom::{
     bytes::complete::tag,
     character::complete::digit1,
@@ -9,11 +13,14 @@ use nom::{
 fn main() {
     // let readings = parse_input(_EXAMPLE);
     // let row = 10;
+    // let part2_max = 20;
 
     let readings = parse_input(INPUT);
     let row = 2000000;
+    let part2_max = 4000000;
 
     println!("part 1: {}", part1(&readings, row));
+    println!("part 2: {}", part2(&readings, part2_max));
 }
 
 fn part1(readings: &[SensorReading], row: i32) -> usize {
@@ -32,15 +39,17 @@ fn part1(readings: &[SensorReading], row: i32) -> usize {
 
     // Iterate over the row in question
     (min_x..=max_x)
-        .filter(|&x| {
-            readings
-                .iter()
-                .any(|reading| is_point_impossible(reading, x, row))
-        })
+        .filter(|&x| is_point_impossible(readings, x, row))
         .count()
 }
 
-fn is_point_impossible(reading: &SensorReading, x: i32, y: i32) -> bool {
+fn is_point_impossible(readings: &[SensorReading], x: i32, y: i32) -> bool {
+    readings
+        .iter()
+        .any(|reading| is_point_impossible_for_reading(reading, x, y))
+}
+
+fn is_point_impossible_for_reading(reading: &SensorReading, x: i32, y: i32) -> bool {
     if (x, y) == reading.beacon {
         return false;
     }
@@ -49,6 +58,22 @@ fn is_point_impossible(reading: &SensorReading, x: i32, y: i32) -> bool {
     let point_distance = manhattan_distance(reading.sensor, (x, y));
 
     point_distance <= sensor_distance
+}
+
+fn part2(readings: &[SensorReading], max_bound: i32) -> i32 {
+    let existing_beacons = readings
+        .iter()
+        .map(|reading| reading.beacon)
+        .collect::<HashSet<Point>>();
+
+    let (x, y) = (0..=max_bound)
+        .cartesian_product(0..=max_bound)
+        .find(|p@&(x, y)| !is_point_impossible(readings, x, y) && !existing_beacons.contains(p))
+        .expect("no solution found");
+
+    println!("({}, {})", x, y);
+
+    x * 4000000 + y
 }
 
 // fn part1(readings: &[SensorReading], row: i32) -> usize {
@@ -106,7 +131,6 @@ fn is_point_impossible(reading: &SensorReading, x: i32, y: i32) -> bool {
 
 //     covered
 // }
-
 
 type Point = (i32, i32);
 
