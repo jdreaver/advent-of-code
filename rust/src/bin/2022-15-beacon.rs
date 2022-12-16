@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use itertools::Itertools;
-
 use nom::{
     bytes::complete::tag,
     character::complete::digit1,
@@ -11,13 +9,13 @@ use nom::{
 };
 
 fn main() {
-    let readings = parse_input(_EXAMPLE);
-    let row = 10;
-    let part2_max = 20;
+    // let readings = parse_input(_EXAMPLE);
+    // let row = 10;
+    // let part2_max = 20;
 
-    // let readings = parse_input(INPUT);
-    // let row = 2000000;
-    // let part2_max = 4000000;
+    let readings = parse_input(INPUT);
+    let row = 2000000;
+    let part2_max = 4000000;
 
     println!("part 1: {}", part1(&readings, row));
     println!("part 2: {}", part2(&readings, part2_max));
@@ -56,75 +54,42 @@ fn in_sensor_range(reading: &SensorReading, x: i32, y: i32) -> bool {
     point_distance <= sensor_distance
 }
 
-fn part2(readings: &[SensorReading], max_bound: i32) -> i32 {
-    let existing_beacons = readings
+fn part2(readings: &[SensorReading], max_bound: i32) -> i64 {
+    let known_beacons = readings
         .iter()
         .map(|reading| reading.beacon)
         .collect::<HashSet<Point>>();
 
-    let (x, y) = (0..=max_bound)
-        .cartesian_product(0..=max_bound)
-        .find(|p @ &(x, y)| !is_point_impossible(readings, x, y) && !existing_beacons.contains(p))
+    // Since there is only a single point for the solution, it must lie just
+    // outside the boundary of a scanner.
+    let (x, y) = readings
+        .iter()
+        .flat_map(reading_outside_boundary)
+        .filter(|&(x, y)| x >= 0 && x <= max_bound && y >= 0 && y <= max_bound)
+        .filter(|point| !known_beacons.contains(point))
+        .find(|&(x, y)| readings.iter().all(|reading| !in_sensor_range(reading, x, y)))
         .expect("no solution found");
 
-    x * 4000000 + y
+    (x as i64) * 4000000 + (y as i64)
 }
 
-// fn part1(readings: &[SensorReading], row: i32) -> usize {
-//     let mut cover_sets = readings.iter().map(|reading| fill_in_covered(reading));
-//     let mut covering = cover_sets.next().unwrap_or_default();
-//     cover_sets.for_each(|set| {
-//         covering.extend(&set);
-//     });
-//     println!("done with unions");
-
-//     let &(first_x, _) = covering.iter().next().expect("empty covering set");
-//     let mut min_x = first_x;
-//     let mut max_x = first_x;
-//     // let mut min_y = first_y;
-//     // let mut max_y = first_y;
-//     for &(x, _) in covering.iter() {
-//         min_x = std::cmp::min(min_x, x);
-//         max_x = std::cmp::max(max_x, x);
-//         // min_y = std::cmp::min(min_y, y);
-//         // max_y = std::cmp::max(max_y, y);
-//     }
-
-//     println!("starting iter");
-//     (min_x..=max_x)
-//         .filter(|&x| covering.contains(&(x, row)))
-//         .count()
-// }
-
-// fn fill_in_covered(reading: &SensorReading) -> HashSet<Point> {
-//     println!("doing reading {:?}", reading);
-//     let max_distance =
-//         (reading.beacon_x - reading.sensor_x).abs() + (reading.beacon_y - reading.sensor_y).abs();
-
-//     let mut covered = HashSet::new();
-//     covered.insert((reading.sensor_x, reading.sensor_y));
-
-//     for distance in 1..=max_distance {
-//         for i in 0..distance {
-//             // Start vertical, go down and to the right
-//             covered.insert((reading.sensor_x + i, reading.sensor_y + distance - i));
-
-//             // Start right, go down and to the left
-//             covered.insert((reading.sensor_x + distance - i, reading.sensor_y - i));
-
-//             // Start down, go up and to the left
-//             covered.insert((reading.sensor_x - i, reading.sensor_y - distance + i));
-
-//             // Start left, go up and to the right
-//             covered.insert((reading.sensor_x - distance + i, reading.sensor_y + i));
-//         }
-//     }
-
-//     // Actual beacon doesn't count
-//     covered.remove(&(reading.beacon_x, reading.beacon_y));
-
-//     covered
-// }
+fn reading_outside_boundary(reading: &SensorReading) -> Vec<Point> {
+    let distance = manhattan_distance(reading.sensor, reading.beacon) + 1;
+    (0..distance)
+        .flat_map(|i| {
+            vec![
+                // Start vertical, go down and to the right
+                (reading.sensor.0 + i, reading.sensor.1 + distance - i),
+                // Start right, go down and to the left
+                (reading.sensor.0 + distance - i, reading.sensor.1 - i),
+                // Start down, go up and to the left
+                (reading.sensor.0 - i, reading.sensor.1 - distance + i),
+                // Start left, go up and to the right
+                (reading.sensor.0 - distance + i, reading.sensor.1 + i),
+            ]
+        })
+        .collect()
+}
 
 type Point = (i32, i32);
 
