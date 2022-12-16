@@ -11,13 +11,13 @@ use nom::{
 };
 
 fn main() {
-    // let readings = parse_input(_EXAMPLE);
-    // let row = 10;
-    // let part2_max = 20;
+    let readings = parse_input(_EXAMPLE);
+    let row = 10;
+    let part2_max = 20;
 
-    let readings = parse_input(INPUT);
-    let row = 2000000;
-    let part2_max = 4000000;
+    // let readings = parse_input(INPUT);
+    // let row = 2000000;
+    // let part2_max = 4000000;
 
     println!("part 1: {}", part1(&readings, row));
     println!("part 2: {}", part2(&readings, part2_max));
@@ -46,14 +46,10 @@ fn part1(readings: &[SensorReading], row: i32) -> usize {
 fn is_point_impossible(readings: &[SensorReading], x: i32, y: i32) -> bool {
     readings
         .iter()
-        .any(|reading| is_point_impossible_for_reading(reading, x, y))
+        .any(|reading| (x, y) != reading.beacon && in_sensor_range(reading, x, y))
 }
 
-fn is_point_impossible_for_reading(reading: &SensorReading, x: i32, y: i32) -> bool {
-    if (x, y) == reading.beacon {
-        return false;
-    }
-
+fn in_sensor_range(reading: &SensorReading, x: i32, y: i32) -> bool {
     let sensor_distance = manhattan_distance(reading.sensor, reading.beacon);
     let point_distance = manhattan_distance(reading.sensor, (x, y));
 
@@ -68,10 +64,8 @@ fn part2(readings: &[SensorReading], max_bound: i32) -> i32 {
 
     let (x, y) = (0..=max_bound)
         .cartesian_product(0..=max_bound)
-        .find(|p@&(x, y)| !is_point_impossible(readings, x, y) && !existing_beacons.contains(p))
+        .find(|p @ &(x, y)| !is_point_impossible(readings, x, y) && !existing_beacons.contains(p))
         .expect("no solution found");
-
-    println!("({}, {})", x, y);
 
     x * 4000000 + y
 }
