@@ -12,7 +12,8 @@ use nom::{
 
 fn main() {
     let tunnels = parse_input(_EXAMPLE);
-    println!("part 1: {}", max_pressure_release(&tunnels));
+    let turns = 30;
+    println!("part 1: {}", max_pressure_release(&tunnels, turns));
 }
 
 type TotalPressure = u32;
@@ -30,34 +31,65 @@ fn max_pressure_release(tunnels: &[Tunnel], turns: u32) -> TotalPressure {
     queue.push_back((
         Path {
             tunnel: "AA".to_string(),
+            remaining_turns: turns,
             opened_valves: BTreeSet::new(),
         },
         0,
     ));
 
+    let mut max_pressure = 0;
+
     while let Some((path, total_pressure)) = queue.pop_front() {
         let tunnel = tunnels_by_name.get(&path.tunnel).expect("no tunnel found");
-        // if let Some(&existing_pressure) = paths.get(&path) {
-        //     if existing_pressure <= total_pressure {
-        //         // We already have a better path here
-        //         continue;
-        //     }
-        // }
+        if let Some(&existing_pressure) = paths.get(&path) {
+            if existing_pressure <= total_pressure {
+                // We already have a better path here
+                continue;
+            }
+        }
+        paths.insert(path.clone(), total_pressure);
+
+        max_pressure = std::cmp::max(max_pressure, total_pressure);
+
+        // TODO: Need to iterate over tunnels left with pressure. Maybe put that
+        // in Path and store remaining valves instead of opened valves?
+        for next in tunnel.connections.iter() {
+            if let Some(&dist) = distances.get(&(&path.tunnel, next)) {
+                if path.remaining_turns < dist {
+                    continue;
+                }
+
+                let mut opened_valves = path.opened_valves.clone();
+                opened_valves.insert(next.clone());
+                let next_tunnel = tunnels_by_name.get(&next).expect("couldn't find next");
+                let next_pressure = next_tunnel.flow_rate * path.remaining_turns;
+
+                queue.push_back((
+                    Path {
+                        tunnel: next.clone(),
+                        remaining_turns: path.remaining_turns - dist - 1,
+                        opened_valves,
+                    },
+                    total_pressure + next_pressure,
+                ));
+            }
+        }
     }
 
-    0
+    max_pressure
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 struct Path {
     tunnel: String,
+    remaining_turns: u32,
     opened_valves: BTreeSet<String>,
 }
 
 type Steps = u32;
 
 // Dijkstra to find distances between every pair of tunnels
-fn tunnel_distances(tunnels: &[Tunnel]) -> HashMap<(String, String), Steps> {
+fn tunnel_distances(tunnels: &[Tunnel]) -> HashMap<(&String, &String), Steps> {
     tunnels
         .iter()
         .flat_map(|source| {
@@ -68,7 +100,7 @@ fn tunnel_distances(tunnels: &[Tunnel]) -> HashMap<(String, String), Steps> {
                 .filter(move |&dest| dest.name != source.name && dest.flow_rate > 0)
                 .map(move |dest| {
                     (
-                        (source.name.clone(), dest.name.clone()),
+                        (&source.name, &dest.name),
                         tunnel_distance(tunnels, &source.name, &dest.name).expect("no path found!"),
                     )
                 })
