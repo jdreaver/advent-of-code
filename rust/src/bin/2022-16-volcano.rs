@@ -1,6 +1,6 @@
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, VecDeque};
 
 use nom::{
     bytes::complete::tag,
@@ -11,7 +11,7 @@ use nom::{
 };
 
 fn main() {
-    let tunnels = parse_input(_EXAMPLE);
+    let tunnels = parse_input(INPUT);
     let turns = 30;
     println!("part 1: {}", max_pressure_release(&tunnels, turns));
 }
@@ -25,6 +25,11 @@ fn max_pressure_release(tunnels: &[Tunnel], turns: u32) -> TotalPressure {
         .collect();
 
     let distances = tunnel_distances(tunnels);
+    let tunnels_with_pressure: Vec<String> = tunnels
+        .iter()
+        .filter(|tunnel| tunnel.flow_rate > 0)
+        .map(|tunnel| tunnel.name.clone())
+        .collect();
 
     let mut paths: HashMap<Path, TotalPressure> = HashMap::new();
     let mut queue: VecDeque<(Path, TotalPressure)> = VecDeque::new();
@@ -40,9 +45,8 @@ fn max_pressure_release(tunnels: &[Tunnel], turns: u32) -> TotalPressure {
     let mut max_pressure = 0;
 
     while let Some((path, total_pressure)) = queue.pop_front() {
-        let tunnel = tunnels_by_name.get(&path.tunnel).expect("no tunnel found");
         if let Some(&existing_pressure) = paths.get(&path) {
-            if existing_pressure <= total_pressure {
+            if existing_pressure >= total_pressure {
                 // We already have a better path here
                 continue;
             }
@@ -51,27 +55,32 @@ fn max_pressure_release(tunnels: &[Tunnel], turns: u32) -> TotalPressure {
 
         max_pressure = std::cmp::max(max_pressure, total_pressure);
 
-        // TODO: Need to iterate over tunnels left with pressure. Maybe put that
-        // in Path and store remaining valves instead of opened valves?
-        for next in tunnel.connections.iter() {
+        for next in tunnels_with_pressure.iter() {
+            if path.opened_valves.contains(next) {
+                continue;
+            }
+
             if let Some(&dist) = distances.get(&(&path.tunnel, next)) {
-                if path.remaining_turns < dist {
-                    continue;
-                }
+                let remaining_turns = match path.remaining_turns.checked_sub(dist + 1) {
+                    Some(x) => x,
+                    None => continue,
+                };
 
                 let mut opened_valves = path.opened_valves.clone();
                 opened_valves.insert(next.clone());
-                let next_tunnel = tunnels_by_name.get(&next).expect("couldn't find next");
-                let next_pressure = next_tunnel.flow_rate * path.remaining_turns;
 
-                queue.push_back((
-                    Path {
-                        tunnel: next.clone(),
-                        remaining_turns: path.remaining_turns - dist - 1,
-                        opened_valves,
-                    },
-                    total_pressure + next_pressure,
-                ));
+                let next_tunnel = tunnels_by_name.get(&next).expect("couldn't find next");
+                let next_pressure = next_tunnel.flow_rate * remaining_turns;
+
+                let new_path = Path {
+                    tunnel: next.clone(),
+                    remaining_turns,
+                    opened_valves,
+                };
+
+                // println!("{:?} {}", new_path, total_pressure + next_pressure);
+
+                queue.push_back((new_path, total_pressure + next_pressure));
             }
         }
     }
