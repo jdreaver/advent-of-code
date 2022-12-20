@@ -1,17 +1,12 @@
 use std::collections::{HashSet, VecDeque};
 
-use nom::{
-    bytes::complete::tag,
-    character::complete::digit1,
-    combinator::map_res,
-    IResult,
-};
+use nom::{bytes::complete::tag, character::complete::digit1, combinator::map_res, IResult};
 
 fn main() {
     let input = parse_blueprints(_EXAMPLE);
     println!("{:?}", input);
 
-    println!("{}", maximize_geodes(&input[0], 24));
+    println!("{}", maximize_geodes(&input[0], 21));
 }
 
 type Minutes = u32;
@@ -56,25 +51,43 @@ fn maximize_geodes(blueprint: &Blueprint, minutes: u32) -> Geodes {
     let mut queue = SimulationQueue::new();
 
     let initial_state = SimulationState {
-            remaining_minutes: minutes,
-            ore: 0,
-            ore_robots: 1,
-            clay: 0,
-            clay_robots: 0,
-            obsidian: 0,
-            obsidian_robots: 0,
-            geodes: 0,
-            geode_robots: 0,
-        };
+        remaining_minutes: minutes,
+        ore: 0,
+        ore_robots: 1,
+        clay: 0,
+        clay_robots: 0,
+        obsidian: 0,
+        obsidian_robots: 0,
+        geodes: 0,
+        geode_robots: 0,
+    };
     queue.insert_state(initial_state);
 
+    // Max out robots based on max resource dependencies. There is no point
+    // going over this number because we will just generate a surplus each turn.
+    let max_ore_robots: u32 = *[
+        blueprint.ore_robot_cost_ore,
+        blueprint.clay_robot_cost_ore,
+        blueprint.obsidian_robot_cost_ore,
+        blueprint.geode_robot_cost_ore,
+    ]
+    .iter()
+    .max()
+    .expect("no max");
+    let max_clay_robots = blueprint.obsidian_robot_cost_clay;
+    let max_obsidian_robots = blueprint.geode_robot_cost_obsidian;
+
     while let Some(state) = queue.queue.pop_front() {
-        if state.remaining_minutes == 0 {
-            max_geodes = std::cmp::max(max_geodes, state.geodes);
-        }
+        let remaining_minutes = match state.remaining_minutes.checked_sub(1) {
+            Some(m) => m,
+            None => {
+                max_geodes = std::cmp::max(max_geodes, state.geodes);
+                continue;
+            }
+        };
 
         let new_state = SimulationState {
-            remaining_minutes: state.remaining_minutes - 1,
+            remaining_minutes,
             ore: state.ore + state.ore_robots,
             ore_robots: state.ore_robots,
             clay: state.clay + state.clay_robots,
@@ -84,23 +97,26 @@ fn maximize_geodes(blueprint: &Blueprint, minutes: u32) -> Geodes {
             geodes: state.geodes + state.geode_robots,
             geode_robots: state.geode_robots,
         };
-        queue.insert_state(new_state.clone());
 
-        if state.ore >= blueprint.ore_robot_cost_ore {
+
+        if state.ore >= blueprint.ore_robot_cost_ore && state.ore_robots < max_ore_robots {
             let mut state = state.clone();
             state.ore -= blueprint.ore_robot_cost_ore;
             state.ore_robots += 1;
             queue.insert_state(state);
         }
 
-        if state.ore >= blueprint.clay_robot_cost_ore {
+        if state.ore >= blueprint.clay_robot_cost_ore && state.clay_robots < max_clay_robots {
             let mut state = state.clone();
             state.ore -= blueprint.clay_robot_cost_ore;
             state.clay_robots += 1;
             queue.insert_state(state);
         }
 
-        if state.ore >= blueprint.obsidian_robot_cost_ore && state.clay >= blueprint.obsidian_robot_cost_clay {
+        if state.ore >= blueprint.obsidian_robot_cost_ore
+            && state.clay >= blueprint.obsidian_robot_cost_clay
+            && state.obsidian_robots < max_obsidian_robots
+        {
             let mut state = state.clone();
             state.ore -= blueprint.obsidian_robot_cost_ore;
             state.clay -= blueprint.obsidian_robot_cost_clay;
@@ -108,13 +124,17 @@ fn maximize_geodes(blueprint: &Blueprint, minutes: u32) -> Geodes {
             queue.insert_state(state);
         }
 
-        if state.ore >= blueprint.geode_robot_cost_ore && state.obsidian >= blueprint.geode_robot_cost_obsidian {
+        if state.ore >= blueprint.geode_robot_cost_ore
+            && state.obsidian >= blueprint.geode_robot_cost_obsidian
+        {
             let mut state = state.clone();
             state.ore -= blueprint.geode_robot_cost_ore;
             state.obsidian -= blueprint.geode_robot_cost_obsidian;
             state.geode_robots += 1;
             queue.insert_state(state);
         }
+
+        queue.insert_state(new_state);
     }
 
     max_geodes
@@ -179,7 +199,6 @@ fn parse_u32(input: &str) -> IResult<&str, u32> {
     let (rest, number) = map_res(digit1, |s: &str| s.parse())(input)?;
     Ok((rest, number))
 }
-
 
 const _EXAMPLE: &str = "Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.
 Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.";
